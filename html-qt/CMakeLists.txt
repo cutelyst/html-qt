@@ -6,6 +6,7 @@ include_directories(
 
 set(htmlqt_SRC
     htmltokenizer.cpp
+    htmltokenizer_p.h
 )
 
 set(htmlqt_HEADERS

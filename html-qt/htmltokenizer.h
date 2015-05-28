@@ -2,9 +2,12 @@
 #define HTMLTOKENIZER_H
 
 #include <QObject>
+#include <QTextStream>
 
+class HTMLTokenizerPrivate;
 class HTMLTokenizer
 {
+    Q_DECLARE_PRIVATE(HTMLTokenizer)
 public:
     enum State {
         DataState,
@@ -79,7 +82,18 @@ public:
     HTMLTokenizer();
     ~HTMLTokenizer();
 
+    void setTextStream(QTextStream *stream);
 
+    State state() const;
+
+    void start();
+
+Q_SIGNALS:
+    void character(const QChar &c);
+    void parserError(const QString &error);
+
+protected:
+    HTMLTokenizerPrivate *d_ptr;
 };
 
 #endif // HTMLTOKENIZER_H
