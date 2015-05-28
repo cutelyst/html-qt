@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/include
+
+Name: html-qt5
+Description: HTML Qt parser
+Version: @VERSION@
+Requires: QtCore
+Libs: -L${libdir} -lhtml-qt5
+Cflags: -I${includedir}/html-qt5/
