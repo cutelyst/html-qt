@@ -90,6 +90,7 @@ public:
 
 Q_SIGNALS:
     void character(const QChar &c);
+    void characterString(const QString &string);
     void parserError(const QString &error);
 
 protected:

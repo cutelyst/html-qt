@@ -9,15 +9,23 @@ class HTMLTokenizerPrivate
 {
     Q_DECLARE_PUBLIC(HTMLTokenizer)
 public:
+    // State methods
     bool dataState();
-    bool entityDataState();
+    bool characterReferenceInDataState();
     bool tagOpenState();
+    bool tagNameState();
+    bool markupDeclarationOpenState();
+    bool endTagOpenState();
+    bool bogusCommentState();
 
-    void consumeEntity(QChar *allowedChar = 0);
+    // auxiliary methods
+    QString consumeEntity(QChar *allowedChar = 0);
     QChar consumeNumberEntity(bool isHex);
 
-    QString consumeHexDigits();
-    QString consumeDigits();
+    // current token
+    QString currentTokenName;
+    bool currentTokenSelfClosing = false;
+    bool currentTokenSelfClosingAcknowledged = false;
 
     HTMLTokenizer *q_ptr;
     QTextStream *stream = 0;

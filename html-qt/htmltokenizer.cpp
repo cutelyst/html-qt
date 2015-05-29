@@ -1,5 +1,8 @@
 #include "htmltokenizer_p.h"
 
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QFile>
 #include <QDebug>
 
 #define CALL_MEMBER_FN(object,ptrToMember)  ((object).*(ptrToMember))
@@ -7,6 +10,15 @@
 HTMLTokenizer::HTMLTokenizer() : d_ptr(new HTMLTokenizerPrivate)
 {
     d_ptr->q_ptr = this;
+
+    // TODO https://html.spec.whatwg.org/multipage/entities.json
+    // get from the url and/or keep a local copy
+    QFile entitiesFile("/home/daniel/code/html-qt/entities.json");
+    if (!entitiesFile.open(QFile::ReadOnly)) {
+        return;
+    }
+    QJsonDocument entities = QJsonDocument::fromBinaryData(entitiesFile.readAll());
+    qDebug() << entities.object();
 }
 
 HTMLTokenizer::~HTMLTokenizer()
@@ -40,8 +52,7 @@ void HTMLTokenizer::start()
     qDebug() << "finished";
 }
 
-
-
+// https://html.spec.whatwg.org/multipage/syntax.html#data-state
 bool HTMLTokenizerPrivate::dataState()
 {
     Q_Q(HTMLTokenizer);
@@ -50,9 +61,10 @@ bool HTMLTokenizerPrivate::dataState()
     *stream >> data;
     if (data == QLatin1Char('&')) {
         state = HTMLTokenizer::CharacterReferenceInDataState;
-        stateFn = &HTMLTokenizerPrivate::entityDataState;
+        stateFn = &HTMLTokenizerPrivate::characterReferenceInDataState;
     } else if (data == QLatin1Char('<')) {
         state = HTMLTokenizer::TagOpenState;
+        stateFn = &HTMLTokenizerPrivate::tagOpenState;
     } else if (data.isNull()) {
         state = HTMLTokenizer::TagOpenState;
         tokenQueue.append(qMakePair<QString,QString>("ParseError", "invalid-codepoint"));
@@ -69,15 +81,81 @@ bool HTMLTokenizerPrivate::dataState()
     return true;
 }
 
-bool HTMLTokenizerPrivate::entityDataState()
+// https://html.spec.whatwg.org/multipage/syntax.html#character-reference-in-data-state
+bool HTMLTokenizerPrivate::characterReferenceInDataState()
 {
+    Q_Q(HTMLTokenizer);
 
+    QString ret = consumeEntity();
+    if (ret.isNull()) {
+        q->character(0x0026); // U+0026 AMPERSAND character (&) token
+    } else {
+        q->characterString(ret);
+    }
     state = HTMLTokenizer::DataState;
     stateFn = &HTMLTokenizerPrivate::dataState;
     return true;
 }
 
-void HTMLTokenizerPrivate::consumeEntity(QChar *allowedChar)
+// https://html.spec.whatwg.org/multipage/syntax.html#tag-open-state
+bool HTMLTokenizerPrivate::tagOpenState()
+{
+    Q_Q(HTMLTokenizer);
+
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
+    if (data == QLatin1Char('!')) {
+        state = HTMLTokenizer::MarkupDeclarationOpenState;
+        stateFn = &HTMLTokenizerPrivate::markupDeclarationOpenState;
+    } else if (data == QLatin1Char('/')) {
+        state = HTMLTokenizer::EndTagOpenState;
+        stateFn = &HTMLTokenizerPrivate::endTagOpenState;
+    } else if (data >= 0x0041 && data <= 0x005A) {
+        state = HTMLTokenizer::TagNameState;
+        stateFn = &HTMLTokenizerPrivate::tagNameState;
+        // We could just add 0x0020
+        currentTokenName = data + 0x0020;
+        currentTokenSelfClosing = false;
+        currentTokenSelfClosingAcknowledged = false;
+    } else if (data >= 0x0061 && data <= 0x007A) {
+        state = HTMLTokenizer::TagNameState;
+        stateFn = &HTMLTokenizerPrivate::tagNameState;
+        currentTokenName = data;
+        currentTokenSelfClosing = false;
+        currentTokenSelfClosingAcknowledged = false;
+    } else if (data == QLatin1Char('/')) {
+        q->parserError(QStringLiteral("expected-tag-name-but-got-question-mark"));
+        state = HTMLTokenizer::BogusCommentState;
+        stateFn = &HTMLTokenizerPrivate::bogusCommentState;
+    } else {
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        // LESS-THAN SIGN <
+        q->character(0x003C);
+        stream->seek(initalPos);
+    }
+
+    return true;
+}
+
+bool HTMLTokenizerPrivate::tagNameState()
+{
+
+}
+
+bool HTMLTokenizerPrivate::markupDeclarationOpenState()
+{
+
+}
+
+bool HTMLTokenizerPrivate::endTagOpenState()
+{
+
+}
+
+// https://html.spec.whatwg.org/multipage/syntax.html#consume-a-character-reference
+QString HTMLTokenizerPrivate::consumeEntity(QChar *allowedChar)
 {
     Q_Q(HTMLTokenizer);
 
@@ -97,38 +175,31 @@ void HTMLTokenizerPrivate::consumeEntity(QChar *allowedChar)
         // Not a character reference. No characters are consumed,
         // and nothing is returned. (This is not an error, either.)
         stream->seek(origPos);
+        return QString();
     } else if (data == 0x0023) { // Number sign (#)
         output.append(data);
 
         *stream >> data;
-        QString number;
+        QChar number;
         if (data == 0x0078 || // Latin small letter X
                 data == 0x0058) { // Latin capital letter X
-            number = consumeHexDigits();
+            number = consumeNumberEntity(true);
         } else {
-            number = consumeDigits();
+            number = consumeNumberEntity(false);
         }
 
         if (number.isNull()) {
             q->parserError(QStringLiteral("expected-numeric-entity"));
             // unconsume all characters
             stream->seek(origPos);
-            return;
+            return QString();
         }
 
-        *stream >> data;
-        if (data != 0x003B) { //Semicolon
-            q->parserError(QStringLiteral("expected-numeric-entity"));
-            // unconsume all characters
-            stream->seek(origPos);
-            return;
-        }
-
+        return number;
     } else {
 
     }
-
-
+    return QString();
 }
 
 QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
@@ -138,30 +209,37 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
     QChar ret;
     QString charStack;
     QChar c;
-    if (isHex) {
-        do {
-            *stream >> c;
-            // Zero (0) to Nine (9)
-            if ((c >= 0x0030 && c <= 0x39) ||
-                    (c >= 0x0041 && c <= 0x0046) || // Latin A to Latin F
-                    (c >= 0x0061 && c <= 0x0066)) { // Latin a to Latin f
-                charStack.append(c);
-            } else {
-
-            }
-        } while (!stream->atEnd());
-    } else {
-        do {
-            *stream >> c;
-            // Zero (0) to Nine (9)
-            if ((c >= 0x0030 && c <= 0x39)) {
-                charStack.append(c);
-            } else {
-
-            }
-        } while (!stream->atEnd());
-    }
     qint64 lastPos = stream->pos();
+    *stream >> c;
+    if (isHex) {
+        while (((c >= 0x0030 && c <= 0x39) || // Zero (0) to Nine (9)
+                (c >= 0x0041 && c <= 0x0046) || // Latin A to Latin F
+                (c >= 0x0061 && c <= 0x0066)) && // Latin a to Latin f
+               !stream->atEnd()) {
+            charStack.append(c); // store the position to rewind for ;
+            lastPos = stream->pos();
+            *stream >> c;
+        }
+    } else {
+        while (c >= 0x0030 && c <= 0x39 && // Zero (0) to Nine (9)
+               !stream->atEnd()) {
+            charStack.append(c);
+            lastPos = stream->pos(); // store the position to rewind for ;
+            *stream >> c;
+        }
+    }
+
+    // No char was found return null to unconsume
+    if (charStack.isNull()) {
+        return QChar::Null;
+    }
+
+    // Discard the ; if present. Otherwise, put it back on the queue and
+    // invoke parseError on parser.
+    if (c != 0x003B) {
+        q->parserError(QStringLiteral("numeric-entity-without-semicolon"));
+        stream->seek(lastPos);
+    }
 
     // Convert the number using the proper base
     bool ok;
@@ -198,50 +276,5 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
         }
     }
 
-    // Discard the ; if present. Otherwise, put it back on the queue and
-    // invoke parseError on parser.
-    if (c != 0x003B) {
-        q->parserError(QStringLiteral("numeric-entity-without-semicolon"));
-        stream->seek(lastPos);
-    }
-
-    return ret;
-}
-
-QString HTMLTokenizerPrivate::consumeHexDigits()
-{
-    qint64 originalPos = stream->pos();
-
-    QString ret;
-    QChar data;
-    do {
-        *stream >> data;
-        // Zero (0) to Nine (9)
-        if ((data >= 0x0030 && data <= 0x39) ||
-                (data >= 0x0041 && data <= 0x0046) || // Latin A to Latin F
-                (data >= 0x0061 && data <= 0x0066)) { // Latin a to Latin f
-            ret.append(data);
-        } else {
-
-        }
-    } while (!stream->atEnd());
-    return ret;
-}
-
-QString HTMLTokenizerPrivate::consumeDigits()
-{
-    qint64 originalPos = stream->pos();
-
-    QString ret;
-    QChar data;
-    do {
-        *stream >> data;
-        // Zero (0) to Nine (9)
-        if ((data >= 0x0030 && data <= 0x39)) {
-            ret.append(data);
-        } else {
-
-        }
-    } while (!stream->atEnd());
     return ret;
 }
