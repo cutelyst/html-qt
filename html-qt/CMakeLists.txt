@@ -26,8 +26,6 @@ set_target_properties(html-qt5 PROPERTIES VERSION ${HTMLQT_VERSION} SOVERSION ${
 
 qt5_use_modules(html-qt5 Core Network)
 
-set_property(TARGET html-qt5 PROPERTY COMPILE_DEFINITIONS HTMLQT_STATIC)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/html-qt5.pc.in
   ${CMAKE_CURRENT_BINARY_DIR}/html-qt5.pc
   @ONLY
@@ -35,7 +33,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/html-qt5.pc.in
 
 install(TARGETS html-qt5 EXPORT HTMLQt5Targets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/html-qt5.pc
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
 install(FILES ${htmlqt_HEADERS}
         DESTINATION include/html-qt5/HTMLQt

@@ -48,6 +48,7 @@ void HTMLTokenizer::start()
 
     while (CALL_MEMBER_FN(*d, d->stateFn)()) {
         // dunno what to do here :)
+        qDebug() << d->stream->pos() << d->state;
     }
     qDebug() << "finished";
 }
@@ -150,6 +151,11 @@ bool HTMLTokenizerPrivate::markupDeclarationOpenState()
 }
 
 bool HTMLTokenizerPrivate::endTagOpenState()
+{
+
+}
+
+bool HTMLTokenizerPrivate::bogusCommentState()
 {
 
 }

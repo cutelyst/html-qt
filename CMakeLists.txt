@@ -83,3 +83,4 @@ include_directories(
 )
 
 add_subdirectory(html-qt)
+add_subdirectory(cmd)

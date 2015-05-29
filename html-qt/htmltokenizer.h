@@ -5,9 +5,11 @@
 #include <QTextStream>
 
 class HTMLTokenizerPrivate;
-class HTMLTokenizer
+class HTMLTokenizer : public QObject
 {
+    Q_OBJECT
     Q_DECLARE_PRIVATE(HTMLTokenizer)
+    Q_ENUMS(State)
 public:
     enum State {
         DataState,
