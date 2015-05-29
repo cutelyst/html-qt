@@ -2,10 +2,28 @@
 
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMetaEnum>
 #include <QFile>
 #include <QDebug>
 
 #define CALL_MEMBER_FN(object,ptrToMember)  ((object).*(ptrToMember))
+
+#define IS_ASCII_UPPERCASE(c) (0x0041 <= c && c <= 0x005A)
+#define IS_ASCII_LOWERCASE(c) (0x0061 <= c && c <= 0x007A)
+#define IS_ASCII_DIGITS(c) (0x0030 <= c && c <= 0x0039) // Zero (0) to Nine (9)
+#define IS_ASCII_HEX_DIGITS(c) (IS_ASCII_DIGITS(c) || \
+    (0x0041 <= c && c <= 0x0046) || /* Latin A to Latin F */ \
+    (0x0061 <= c && c <= 0x0066)) // or Latin a to Latin f
+#define IS_SPACE_CHARACTER(c) (data == 0x0009 || /* CHARACTER TABULATION (tab) */ \
+    data == 0x000A || /* LINE FEED (LF) */ \
+    data == 0x000C || /* FORM FEED (FF) */ \
+    data == 0x0020) // SPACE
+#define IS_SOLIDUS(c) (data == 0x002F) // SOLIDUS (/)
+#define IS_LESS_THAN_SIGN(c) (data == 0x003C) // LESS-THAN SIGN (>)
+#define IS_EQUALS_SIGN(c) (data == 0x003D) // EQUALS SIGN (=)
+#define IS_GREATER_THAN_SIGN(c) (data == 0x003E) // GREATER-THAN SIGN (>)
+#define IS_QUOTATION_MARK(c) (data == 0x0022) // QUOTATION MARK (")
+#define IS_APOSTROPHE(c) (data == 0x0027) // APOSTROPHE (')
 
 HTMLTokenizer::HTMLTokenizer() : d_ptr(new HTMLTokenizerPrivate)
 {
@@ -46,9 +64,9 @@ void HTMLTokenizer::start()
         return;
     }
 
-    while (CALL_MEMBER_FN(*d, d->stateFn)()) {
+    while (CALL_MEMBER_FN(*d, d->stateFn)() && !d->stream->atEnd()) {
         // dunno what to do here :)
-        qDebug() << d->stream->pos() << d->state;
+        qDebug() << d->stream->pos() << metaObject()->enumerator(0).key(d->state) << d->stream->atEnd();
     }
     qDebug() << "finished";
 }
@@ -68,14 +86,12 @@ bool HTMLTokenizerPrivate::dataState()
         stateFn = &HTMLTokenizerPrivate::tagOpenState;
     } else if (data.isNull()) {
         state = HTMLTokenizer::TagOpenState;
-        tokenQueue.append(qMakePair<QString,QString>("ParseError", "invalid-codepoint"));
-        tokenQueue.append(qMakePair<QString,QString>("Characters", "\u0000"));
+        Q_EMIT q->parserError("invalid-codepoint");
         Q_EMIT q->character(data);
     } else if (stream->status() != QTextStream::Ok) {
         // Tokenization ends.
         return false;
     } else {
-        tokenQueue.append(qMakePair<QString,QString>("Characters", data));
         Q_EMIT q->character(data);
     }
 
@@ -112,28 +128,25 @@ bool HTMLTokenizerPrivate::tagOpenState()
     } else if (data == QLatin1Char('/')) {
         state = HTMLTokenizer::EndTagOpenState;
         stateFn = &HTMLTokenizerPrivate::endTagOpenState;
-    } else if (data >= 0x0041 && data <= 0x005A) {
+    } else if (IS_ASCII_UPPERCASE(data)) {
         state = HTMLTokenizer::TagNameState;
         stateFn = &HTMLTokenizerPrivate::tagNameState;
-        // We could just add 0x0020
-        currentTokenName = data + 0x0020;
-        currentTokenSelfClosing = false;
-        currentTokenSelfClosingAcknowledged = false;
-    } else if (data >= 0x0061 && data <= 0x007A) {
+        currentToken = new HTMLToken;
+        currentToken->name = data + 0x0020;
+    } else if (IS_ASCII_LOWERCASE(data)) {
         state = HTMLTokenizer::TagNameState;
         stateFn = &HTMLTokenizerPrivate::tagNameState;
-        currentTokenName = data;
-        currentTokenSelfClosing = false;
-        currentTokenSelfClosingAcknowledged = false;
+        currentToken = new HTMLToken;
+        currentToken->name = data;
     } else if (data == QLatin1Char('/')) {
         q->parserError(QStringLiteral("expected-tag-name-but-got-question-mark"));
         state = HTMLTokenizer::BogusCommentState;
         stateFn = &HTMLTokenizerPrivate::bogusCommentState;
     } else {
+        q->parserError(QStringLiteral("expected-tag-name"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        // LESS-THAN SIGN <
-        q->character(0x003C);
+        q->character(0x003C); // LESS-THAN SIGN <
         stream->seek(initalPos);
     }
 
@@ -141,6 +154,145 @@ bool HTMLTokenizerPrivate::tagOpenState()
 }
 
 bool HTMLTokenizerPrivate::tagNameState()
+{
+    Q_Q(HTMLTokenizer);
+
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
+    if (IS_SPACE_CHARACTER(data)) {
+        state = HTMLTokenizer::BeforeAttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::beforeAttributeNameState;
+    } else if (IS_SOLIDUS(data)) {
+        state = HTMLTokenizer::SelfClosingStartTagState;
+        stateFn = &HTMLTokenizerPrivate::selfClosingStartTagState;
+    } else if (IS_GREATER_THAN_SIGN(data)) {
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        Q_EMIT q->character(data);
+    } else if (IS_ASCII_UPPERCASE(data)) {
+        // Appending the lower case version
+        currentToken->name.append(data + 0x0020);
+    } else if (data.isNull()) {
+        Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
+        currentToken->name.append(0xFFFD); // REPLACEMENT CHARACTER
+    } else if (stream->status() != QTextStream::Ok) {
+        Q_EMIT q->parserError(QStringLiteral("eof-in-tag-name"));
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        stream->seek(initalPos);
+    } else {
+        currentToken->name.append(data);
+    }
+
+    return true;
+}
+
+bool HTMLTokenizerPrivate::beforeAttributeNameState()
+{
+    Q_Q(HTMLTokenizer);
+
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
+
+    // Eat all space characters
+    while (IS_SPACE_CHARACTER(data)) {
+        initalPos = stream->pos();
+        *stream >> data; // Ignore the character.
+    }
+
+    if (IS_SOLIDUS(data)) {
+        state = HTMLTokenizer::SelfClosingStartTagState;
+        stateFn = &HTMLTokenizerPrivate::selfClosingStartTagState;
+    } else if (IS_GREATER_THAN_SIGN(data)) {
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        emitCurrentTagToken();
+    } else if (IS_ASCII_UPPERCASE(data)) {
+        // Appending the lower case version
+        currentToken->data.append(qMakePair(data + 0x0020, QString()));
+        state = HTMLTokenizer::AttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::attributeNameState;
+    } else if (data.isNull()) {
+        Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
+        currentToken->data.append(qMakePair(0xFFFD, QString())); // REPLACEMENT CHARACTER
+        state = HTMLTokenizer::AttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::attributeNameState;
+    } else if (IS_QUOTATION_MARK(data) ||
+               IS_APOSTROPHE(data) ||
+               IS_LESS_THAN_SIGN(data) ||
+               IS_EQUALS_SIGN(data)) {
+        Q_EMIT q->parserError(QStringLiteral("invalid-character-in-attribute-name"));
+        currentToken->data.append(qMakePair(data, QString()));
+        state = HTMLTokenizer::AttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::attributeNameState;
+    } else if (stream->status() != QTextStream::Ok) {
+        Q_EMIT q->parserError(QStringLiteral("expected-attribute-name-but-got-eof"));
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        stream->seek(initalPos);
+    } else {
+        currentToken->data.append(qMakePair(data, QString()));
+        state = HTMLTokenizer::AttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::attributeNameState;
+    }
+
+    return true;
+}
+
+bool HTMLTokenizerPrivate::attributeNameState()
+{
+    Q_Q(HTMLTokenizer);
+
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
+
+    bool leavingThisState = true;
+    bool emitToken = false;
+    if (IS_SPACE_CHARACTER(data)) {
+        state = HTMLTokenizer::AfterAttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::afterAttributeNameState;
+    } else if (IS_SOLIDUS(data)) {
+        state = HTMLTokenizer::SelfClosingStartTagState;
+        stateFn = &HTMLTokenizerPrivate::selfClosingStartTagState;
+    } else if (IS_EQUALS_SIGN(data)) {
+        state = HTMLTokenizer::BeforeAttributeValueState;
+        stateFn = &HTMLTokenizerPrivate::beforeAttributeValueState;
+    } else if (IS_GREATER_THAN_SIGN(data)) {
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        emitCurrentTagToken();
+    } else if (IS_ASCII_UPPERCASE(data)) {
+
+    } else if (data.isNull()) {
+        state = HTMLTokenizer::BeforeAttributeValueState;
+        stateFn = &HTMLTokenizerPrivate::beforeAttributeValueState;
+    } else if (IS_QUOTATION_MARK(data) ||
+               IS_APOSTROPHE(data) ||
+               IS_LESS_THAN_SIGN(data)) {
+
+    } else if (stream->status() != QTextStream::Ok) {
+
+    } else {
+
+    }
+
+    return true;
+}
+
+bool HTMLTokenizerPrivate::afterAttributeNameState()
+{
+
+}
+
+bool HTMLTokenizerPrivate::beforeAttributeValueState()
+{
+
+}
+
+bool HTMLTokenizerPrivate::selfClosingStartTagState()
 {
 
 }
@@ -152,7 +304,36 @@ bool HTMLTokenizerPrivate::markupDeclarationOpenState()
 
 bool HTMLTokenizerPrivate::endTagOpenState()
 {
+    Q_Q(HTMLTokenizer);
 
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
+
+    if (IS_ASCII_UPPERCASE(data)) {
+        // TODO unsure on what to do here
+    } else if (IS_ASCII_LOWERCASE(data)) {
+        // TODO unsure on what to do here
+    } else if (IS_GREATER_THAN_SIGN(data)) {
+        Q_EMIT q->parserError(QStringLiteral("expected-end-of-tag-or-attribute-name-but-got-right-bracket"));
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+    } else if (stream->status() != QTextStream::Ok) {
+        Q_EMIT q->parserError(QStringLiteral("eof-in-end-of-tag-name"));
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        // TODO this doesn't seem right an EOF as >/
+        // shouldn't we emit the token?
+        Q_EMIT q->character('>'); // 0x003C
+        Q_EMIT q->character('/'); // 0x002F
+        stream->seek(initalPos);
+    } else {
+        Q_EMIT q->parserError(QStringLiteral("expected-end-of-tag-or-attribute-name-but-got-something-else"));
+        state = HTMLTokenizer::BogusCommentState;
+        stateFn = &HTMLTokenizerPrivate::bogusCommentState;
+    }
+
+    return true;
 }
 
 bool HTMLTokenizerPrivate::bogusCommentState()
@@ -218,16 +399,14 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
     qint64 lastPos = stream->pos();
     *stream >> c;
     if (isHex) {
-        while (((c >= 0x0030 && c <= 0x39) || // Zero (0) to Nine (9)
-                (c >= 0x0041 && c <= 0x0046) || // Latin A to Latin F
-                (c >= 0x0061 && c <= 0x0066)) && // Latin a to Latin f
+        while (IS_ASCII_HEX_DIGITS(c) &&
                !stream->atEnd()) {
             charStack.append(c); // store the position to rewind for ;
             lastPos = stream->pos();
             *stream >> c;
         }
     } else {
-        while (c >= 0x0030 && c <= 0x39 && // Zero (0) to Nine (9)
+        while (IS_ASCII_DIGITS(c) && // Zero (0) to Nine (9)
                !stream->atEnd()) {
             charStack.append(c);
             lastPos = stream->pos(); // store the position to rewind for ;
@@ -283,4 +462,9 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
     }
 
     return ret;
+}
+
+void HTMLTokenizerPrivate::emitCurrentTagToken()
+{
+
 }

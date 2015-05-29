@@ -5,6 +5,16 @@
 
 typedef  bool (HTMLTokenizerPrivate::*HTMLTokenizerPrivateMemFn)();
 
+class HTMLToken
+{
+public:
+    QString name;
+    QString type;
+    QList<QPair<QString,QString> > data;
+    bool selfClosing = false;
+    bool selfClosingAcknowledged = false;
+};
+
 class HTMLTokenizerPrivate
 {
     Q_DECLARE_PUBLIC(HTMLTokenizer)
@@ -14,6 +24,11 @@ public:
     bool characterReferenceInDataState();
     bool tagOpenState();
     bool tagNameState();
+    bool beforeAttributeNameState();
+    bool attributeNameState();
+    bool afterAttributeNameState();
+    bool beforeAttributeValueState();
+    bool selfClosingStartTagState();
     bool markupDeclarationOpenState();
     bool endTagOpenState();
     bool bogusCommentState();
@@ -21,17 +36,15 @@ public:
     // auxiliary methods
     QString consumeEntity(QChar *allowedChar = 0);
     QChar consumeNumberEntity(bool isHex);
+    void emitCurrentTagToken();
 
     // current token
-    QString currentTokenName;
-    bool currentTokenSelfClosing = false;
-    bool currentTokenSelfClosingAcknowledged = false;
+    HTMLToken *currentToken;
 
     HTMLTokenizer *q_ptr;
     QTextStream *stream = 0;
     HTMLTokenizer::State state = HTMLTokenizer::DataState;
     HTMLTokenizerPrivateMemFn stateFn = &HTMLTokenizerPrivate::dataState;
-    QList<QPair<QString, QString> > tokenQueue;
     QMap<int,int> replacementCharacters = {
         {0x00, 0xFFFD}, // REPLACEMENT CHARACTER
         {0x80, 0x20AC}, // EURO SIGN (€)
