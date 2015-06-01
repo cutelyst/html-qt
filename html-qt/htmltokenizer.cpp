@@ -41,7 +41,7 @@ HTMLTokenizer::HTMLTokenizer() : d_ptr(new HTMLTokenizerPrivate)
 
 HTMLTokenizer::~HTMLTokenizer()
 {
-
+    delete d_ptr;
 }
 
 void HTMLTokenizer::setTextStream(QTextStream *stream)
@@ -138,7 +138,7 @@ bool HTMLTokenizerPrivate::tagOpenState()
         stateFn = &HTMLTokenizerPrivate::tagNameState;
         currentToken = new HTMLToken;
         currentToken->name = data;
-    } else if (data == QLatin1Char('/')) {
+    } else if (data == QLatin1Char('?')) {
         q->parserError(QStringLiteral("expected-tag-name-but-got-question-mark"));
         state = HTMLTokenizer::BogusCommentState;
         stateFn = &HTMLTokenizerPrivate::bogusCommentState;
@@ -169,7 +169,7 @@ bool HTMLTokenizerPrivate::tagNameState()
     } else if (IS_GREATER_THAN_SIGN(data)) {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        Q_EMIT q->character(data);
+        emitCurrentTagToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         // Appending the lower case version
         currentToken->name.append(data + 0x0020);
@@ -202,6 +202,7 @@ bool HTMLTokenizerPrivate::beforeAttributeNameState()
         *stream >> data; // Ignore the character.
     }
 
+    qDebug() << "beforeAttributeNameState" << data;
     if (IS_SOLIDUS(data)) {
         state = HTMLTokenizer::SelfClosingStartTagState;
         stateFn = &HTMLTokenizerPrivate::selfClosingStartTagState;
@@ -297,11 +298,18 @@ bool HTMLTokenizerPrivate::selfClosingStartTagState()
 
 }
 
+// https://html.spec.whatwg.org/multipage/syntax.html#markup-declaration-open-state
 bool HTMLTokenizerPrivate::markupDeclarationOpenState()
 {
+    Q_Q(HTMLTokenizer);
+
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
 
 }
 
+// https://html.spec.whatwg.org/multipage/syntax.html#end-tag-open-state
 bool HTMLTokenizerPrivate::endTagOpenState()
 {
     Q_Q(HTMLTokenizer);
@@ -311,24 +319,30 @@ bool HTMLTokenizerPrivate::endTagOpenState()
     *stream >> data;
 
     if (IS_ASCII_UPPERCASE(data)) {
-        // TODO unsure on what to do here
+        currentToken = new HTMLToken;
+        currentToken->name = data + 0x0020;
+        currentToken->selfClosing = false;
+        state = HTMLTokenizer::TagNameState;
+        stateFn = &HTMLTokenizerPrivate::tagNameState;
     } else if (IS_ASCII_LOWERCASE(data)) {
-        // TODO unsure on what to do here
+        currentToken = new HTMLToken;
+        currentToken->name = data + 0x0020;
+        currentToken->selfClosing = false;
+        state = HTMLTokenizer::TagNameState;
+        stateFn = &HTMLTokenizerPrivate::tagNameState;
     } else if (IS_GREATER_THAN_SIGN(data)) {
-        Q_EMIT q->parserError(QStringLiteral("expected-end-of-tag-or-attribute-name-but-got-right-bracket"));
+        Q_EMIT q->parserError(QStringLiteral("expected-closing-tag-but-got-right-bracket"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
     } else if (stream->status() != QTextStream::Ok) {
-        Q_EMIT q->parserError(QStringLiteral("eof-in-end-of-tag-name"));
+        Q_EMIT q->parserError(QStringLiteral("expected-closing-tag-but-got-eof"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        // TODO this doesn't seem right an EOF as >/
-        // shouldn't we emit the token?
-        Q_EMIT q->character('>'); // 0x003C
-        Q_EMIT q->character('/'); // 0x002F
+        // 0x003C and // 0x002F
+        Q_EMIT q->characterString(QStringLiteral("</"));
         stream->seek(initalPos);
     } else {
-        Q_EMIT q->parserError(QStringLiteral("expected-end-of-tag-or-attribute-name-but-got-something-else"));
+        Q_EMIT q->parserError(QStringLiteral("expected-closing-tag-but-got-char"));
         state = HTMLTokenizer::BogusCommentState;
         stateFn = &HTMLTokenizerPrivate::bogusCommentState;
     }
@@ -466,5 +480,6 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
 
 void HTMLTokenizerPrivate::emitCurrentTagToken()
 {
-
+    qDebug() << "emitCurrentTagToken" << currentToken;
+    currentToken = 0;
 }
