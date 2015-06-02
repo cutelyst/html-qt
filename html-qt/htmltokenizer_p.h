@@ -22,6 +22,8 @@ public:
     bool selfClosing = false;
     bool selfClosingAcknowledged = false;
     bool forceQuirks = false;
+    QString doctypePublicId;
+    QString doctypeSystemId;
 };
 
 class HTMLTokenizerPrivate
@@ -32,21 +34,44 @@ public:
     bool dataState();
     bool characterReferenceInDataState();
     bool tagOpenState();
+    bool endTagOpenState();
     bool tagNameState();
+    // ... RC Raw Script
     bool beforeAttributeNameState();
     bool attributeNameState();
     bool afterAttributeNameState();
     bool beforeAttributeValueState();
+    bool attributeValueDoubleQuotedState();
+    bool attributeValueSingleQuotedState();
+    bool attributeValueUnquotedState();
+    bool characterReferenceInAttributeValueState();
+    bool afterAttributeValueQuotedState();
     bool selfClosingStartTagState();
-    bool markupDeclarationOpenState();
-    bool endTagOpenState();
-    bool commentStartState();
     bool bogusCommentState();
+    bool markupDeclarationOpenState();
+    bool commentStartState();
+    bool commentStartDashState();
+    bool commentState();
+    bool commentEndDashState();
+    bool commentEndState();
+    bool commentEndBangState();
     bool doctypeState();
     bool beforeDocTypeNameState();
     bool docTypeNameState();
     bool afterDocTypeNameState();
     bool afterDocTypePublicKeywordState();
+    bool beforeDocTypePublicIdentifierState();
+    bool docTypePublicIdentifierDoubleQuotedState();
+    bool docTypePublicIdentifierSingleQuotedState();
+    bool afterDocTypePublicIdentifierState();
+    bool betweenDocTypePublicAndSystemIdentifierState();
+    bool afterDocTypeSystemKeywordState();
+    bool beforeDocTypeSystemIdentifierState();
+    bool docTypeSystemIdentifierDoubleQuotedState();
+    bool docTypeSystemIdentifierSingleQuotedState();
+    bool afterDocTypeSystemIdentifierState();
+    bool bogusDocTypeState();
+    bool cDataSectionState();
 
     // auxiliary methods
     QString consumeEntity(QChar *allowedChar = 0);
