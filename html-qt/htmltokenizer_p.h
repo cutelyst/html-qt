@@ -8,11 +8,20 @@ typedef  bool (HTMLTokenizerPrivate::*HTMLTokenizerPrivateMemFn)();
 class HTMLToken
 {
 public:
+    enum Type {
+        StartTagToken,
+        EndTagToken,
+        CommentToken,
+        DocTypeToken
+    };
+    HTMLToken(Type tokenType) : type(tokenType) {}
+
     QString name;
-    QString type;
+    Type type;
     QList<QPair<QString,QString> > data;
     bool selfClosing = false;
     bool selfClosingAcknowledged = false;
+    bool forceQuirks = false;
 };
 
 class HTMLTokenizerPrivate
@@ -31,7 +40,13 @@ public:
     bool selfClosingStartTagState();
     bool markupDeclarationOpenState();
     bool endTagOpenState();
+    bool commentStartState();
     bool bogusCommentState();
+    bool doctypeState();
+    bool beforeDocTypeNameState();
+    bool docTypeNameState();
+    bool afterDocTypeNameState();
+    bool afterDocTypePublicKeywordState();
 
     // auxiliary methods
     QString consumeEntity(QChar *allowedChar = 0);
