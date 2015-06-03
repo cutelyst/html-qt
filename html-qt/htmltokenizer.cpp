@@ -59,7 +59,7 @@ void HTMLTokenizer::start()
     int repeatedPos = 0;
     while (CALL_MEMBER_FN(*d, d->stateFn)() && !d->streamAtEnd()) {
         // dunno what to do here :)
-        qDebug() << d->streamPos() << metaObject()->enumerator(0).key(d->state) << d->streamAtEnd();
+//        qDebug() << d->streamPos() << metaObject()->enumerator(0).key(d->state) << d->streamAtEnd();
         if (lastPos == d->streamPos()) {
             if (++repeatedPos > 10) {
                 qFatal("Infinite loop detected on state: %s, at position: %d",
@@ -236,7 +236,6 @@ bool HTMLTokenizerPrivate::beforeAttributeNameState()
         data = consumeStream();
     }
 
-    qDebug() << "beforeAttributeNameState" << data;
     if (data == '/') {
         state = HTMLTokenizer::SelfClosingStartTagState;
         stateFn = &HTMLTokenizerPrivate::selfClosingStartTagState;
@@ -1514,6 +1513,6 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
 
 void HTMLTokenizerPrivate::emitCurrentTagToken()
 {
-    qDebug() << "emitCurrentTagToken" << currentToken;
+//    qDebug() << "emitCurrentTagToken" << currentToken;
     currentToken = 0;
 }
