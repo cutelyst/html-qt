@@ -37,7 +37,7 @@ public:
         }
     }
 
-    QString name;
+    QString name; // or data for comment
     Type type;
     QList<QPair<QString,QString> > data;
     bool selfClosing = false;
@@ -111,6 +111,10 @@ public:
 
     inline void streamSeek(int pos) {
         htmlPos = pos;
+    }
+
+    inline void streamUnconsume(int nChars = 1) {
+        htmlPos -= nChars;
     }
 
     inline bool streamAtEnd() {
