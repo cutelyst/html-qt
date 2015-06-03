@@ -49,8 +49,14 @@ int main(int argc, char *argv[])
     }
 
     HTMLTokenizer tokenizer;
-    tokenizer.setTextStream(in);
+    QTime t;
+    t.start();
+    tokenizer.setHtmlText(in->readAll());
+    qDebug("Time elapsed: %d ms", t.elapsed());
+//    tokenizer.setTextStream(in);
+    t.start();
     tokenizer.start();
+    qDebug("Time elapsed: %d ms", t.elapsed());
 
     return 0;
 }

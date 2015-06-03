@@ -2,7 +2,6 @@
 #define HTMLTOKENIZER_H
 
 #include <QObject>
-#include <QTextStream>
 
 class HTMLTokenizerPrivate;
 class HTMLTokenizer : public QObject
@@ -84,7 +83,7 @@ public:
     HTMLTokenizer();
     ~HTMLTokenizer();
 
-    void setTextStream(QTextStream *stream);
+    void setHtmlText(const QString &html);
 
     State state() const;
 

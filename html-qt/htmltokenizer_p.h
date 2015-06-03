@@ -3,6 +3,9 @@
 
 #include "htmltokenizer.h"
 
+#include <QPair>
+#include <QMap>
+
 typedef  bool (HTMLTokenizerPrivate::*HTMLTokenizerPrivateMemFn)();
 
 class HTMLToken
@@ -22,6 +25,15 @@ public:
             data.append(qMakePair<QString,QString>("", c));
         } else {
             data.last().second.append(c);
+        }
+    }
+
+    void appendDataCurrentAttributeValue(const QString &s)
+    {
+        if (data.isEmpty()) {
+            data.append(qMakePair<QString,QString>("", s));
+        } else {
+            data.last().second.append(s);
         }
     }
 
@@ -53,7 +65,8 @@ public:
     bool attributeValueDoubleQuotedState();
     bool attributeValueSingleQuotedState();
     bool attributeValueUnquotedState();
-    bool characterReferenceInAttributeValueState();
+    // This method is special as for simplicity it is directly called by the callers
+    void characterReferenceInAttributeValueState(QChar *additionalAllowedCharacter);
     bool afterAttributeValueQuotedState();
     bool selfClosingStartTagState();
     bool bogusCommentState();
@@ -83,6 +96,29 @@ public:
     bool cDataSectionState();
 
     // auxiliary methods
+    inline QChar consumeStream(bool &eof)
+    {
+        if (++htmlPos > html.size() || htmlPos < 0) {
+            eof = true;
+            return QChar();
+        } else {
+            eof = false;
+            return html.at(htmlPos);
+        }
+    }
+
+    inline int streamPos() {
+        return htmlPos;
+    }
+
+    inline void streamSeek(int pos) {
+        htmlPos = pos;
+    }
+
+    inline bool streamAtEnd() {
+        return htmlPos > html.size();
+    }
+
     QString consumeEntity(QChar *allowedChar = 0);
     QChar consumeNumberEntity(bool isHex);
     void emitCurrentTagToken();
@@ -91,7 +127,8 @@ public:
     HTMLToken *currentToken;
 
     HTMLTokenizer *q_ptr;
-    QTextStream *stream = 0;
+    QString html;
+    int htmlPos = -1;
     HTMLTokenizer::State state = HTMLTokenizer::DataState;
     HTMLTokenizerPrivateMemFn stateFn = &HTMLTokenizerPrivate::dataState;
     QMap<int,int> replacementCharacters = {
