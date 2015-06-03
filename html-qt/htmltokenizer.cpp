@@ -54,14 +54,14 @@ void HTMLTokenizer::start()
 {
     Q_D(HTMLTokenizer);
 
-    qint64 lastPos = d->streamPos();
+    int lastPos = d->streamPos();
     int repeatedPos = 0;
     while (CALL_MEMBER_FN(*d, d->stateFn)() && !d->streamAtEnd()) {
         // dunno what to do here :)
         qDebug() << d->streamPos() << metaObject()->enumerator(0).key(d->state) << d->streamAtEnd();
         if (lastPos == d->streamPos()) {
             if (++repeatedPos > 10) {
-                qFatal("Infinite loop detected on state: %s, at position: %lld",
+                qFatal("Infinite loop detected on state: %s, at position: %d",
                        metaObject()->enumerator(0).key(d->state),
                        lastPos);
             }
@@ -78,9 +78,7 @@ bool HTMLTokenizerPrivate::dataState()
 {
     Q_Q(HTMLTokenizer);
 
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    QChar data = consumeStream();
     if (data == '&') {
         state = HTMLTokenizer::CharacterReferenceInDataState;
         stateFn = &HTMLTokenizerPrivate::characterReferenceInDataState;
@@ -91,7 +89,7 @@ bool HTMLTokenizerPrivate::dataState()
         state = HTMLTokenizer::TagOpenState;
         Q_EMIT q->parserError("invalid-codepoint");
         Q_EMIT q->character(data);
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         // Tokenization ends.
         return false;
     } else {
@@ -122,10 +120,8 @@ bool HTMLTokenizerPrivate::tagOpenState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
     if (data == '!') {
         state = HTMLTokenizer::MarkupDeclarationOpenState;
         stateFn = &HTMLTokenizerPrivate::markupDeclarationOpenState;
@@ -162,10 +158,8 @@ bool HTMLTokenizerPrivate::endTagOpenState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (IS_ASCII_UPPERCASE(data)) {
         currentToken = new HTMLToken(HTMLToken::EndTagToken);
@@ -183,7 +177,7 @@ bool HTMLTokenizerPrivate::endTagOpenState()
         Q_EMIT q->parserError(QStringLiteral("expected-closing-tag-but-got-right-bracket"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("expected-closing-tag-but-got-eof"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -203,10 +197,8 @@ bool HTMLTokenizerPrivate::tagNameState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
     if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeAttributeNameState;
         stateFn = &HTMLTokenizerPrivate::beforeAttributeNameState;
@@ -223,7 +215,7 @@ bool HTMLTokenizerPrivate::tagNameState()
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
         currentToken->name.append(QChar::ReplacementCharacter);
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-tag-name"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -239,16 +231,13 @@ bool HTMLTokenizerPrivate::beforeAttributeNameState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
-    while (IS_SPACE_CHARACTER(data)) {
+    while (IS_SPACE_CHARACTER(data) && !streamAtEnd()) {
         initalPos = streamPos();
-        bool eof;
-        data = consumeStream(eof);
+        data = consumeStream();
     }
 
     qDebug() << "beforeAttributeNameState" << data;
@@ -277,7 +266,7 @@ bool HTMLTokenizerPrivate::beforeAttributeNameState()
         currentToken->data.append(qMakePair(data, QString()));
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("expected-attribute-name-but-got-eof"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -295,10 +284,8 @@ bool HTMLTokenizerPrivate::attributeNameState()
 {
     Q_Q(HTMLTokenizer);
 
-//    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+//    int initalPos = streamPos();
+    QChar data = consumeStream();
 
 //    bool leavingThisState = true;
 //    bool emitToken = false;
@@ -324,7 +311,7 @@ bool HTMLTokenizerPrivate::attributeNameState()
                data == '\'' ||
                data == '<') {
 
-    } else if (eof) {
+    } else if (streamAtEnd()) {
 
     } else {
 
@@ -337,15 +324,13 @@ bool HTMLTokenizerPrivate::afterAttributeNameState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
     while (IS_SPACE_CHARACTER(data)) {
         initalPos = streamPos();
-        data = consumeStream(eof);
+        data = consumeStream();
     }
 
     if (data == '/') {
@@ -372,7 +357,7 @@ bool HTMLTokenizerPrivate::afterAttributeNameState()
         currentToken->data.append(qMakePair<QString,QString>(data, QString()));
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("expected-end-of-tag-but-got-eof"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -390,15 +375,13 @@ bool HTMLTokenizerPrivate::beforeAttributeValueState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
-    while (IS_SPACE_CHARACTER(data)) {
+    while (IS_SPACE_CHARACTER(data) && !streamAtEnd()) {
         initalPos = streamPos();
-        data = consumeStream(eof);
+        data = consumeStream();
     }
 
     if (data == '"') {
@@ -423,7 +406,7 @@ bool HTMLTokenizerPrivate::beforeAttributeValueState()
         currentToken->appendDataCurrentAttributeValue(data);
         state = HTMLTokenizer::AttributeValueUnquotedState;
         stateFn = &HTMLTokenizerPrivate::attributeValueUnquotedState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("expected-attribute-value-but-got-eof"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -441,10 +424,8 @@ bool HTMLTokenizerPrivate::attributeValueDoubleQuotedState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (data == '"') {
         state = HTMLTokenizer::AfterAttributeValueQuotedState;
@@ -455,7 +436,7 @@ bool HTMLTokenizerPrivate::attributeValueDoubleQuotedState()
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
         currentToken->appendDataCurrentAttributeValue(QChar::ReplacementCharacter);
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-attribute-value-double-quote"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -471,10 +452,8 @@ bool HTMLTokenizerPrivate::attributeValueSingleQuotedState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (data == '\'') {
         state = HTMLTokenizer::AfterAttributeValueQuotedState;
@@ -485,7 +464,7 @@ bool HTMLTokenizerPrivate::attributeValueSingleQuotedState()
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
         currentToken->appendDataCurrentAttributeValue(QChar::ReplacementCharacter);
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-attribute-value-single-quote"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -501,10 +480,8 @@ bool HTMLTokenizerPrivate::attributeValueUnquotedState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeAttributeNameState;
@@ -522,7 +499,7 @@ bool HTMLTokenizerPrivate::attributeValueUnquotedState()
     } else if (data == '"' || data == '\'' || data == '<' || data == '`') {
         Q_EMIT q->parserError(QStringLiteral("unexpected-character-in-unquoted-attribute-value"));
         currentToken->appendDataCurrentAttributeValue(data);
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-attribute-value-no-quotes"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -548,10 +525,8 @@ bool HTMLTokenizerPrivate::afterAttributeValueQuotedState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeAttributeNameState;
@@ -563,7 +538,7 @@ bool HTMLTokenizerPrivate::afterAttributeValueQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("unexpected-EOF-after-attribute-value"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -582,17 +557,15 @@ bool HTMLTokenizerPrivate::selfClosingStartTagState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (data == '>') {
         currentToken->selfClosing = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("unexpected-EOF-after-solidus-in-tag"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -617,14 +590,12 @@ bool HTMLTokenizerPrivate::markupDeclarationOpenState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
     QString charStack = data;
 
     if (data == '-') {
-        data = consumeStream(eof);
+        data = consumeStream();
         charStack.append(data);
         if (data == '-') {
             currentToken = new HTMLToken(HTMLToken::CommentToken);
@@ -635,7 +606,7 @@ bool HTMLTokenizerPrivate::markupDeclarationOpenState()
     } else if (data == 'd' || data == 'D') {
         // consume more 6 chars
         for (int i = 0; i < 6; ++i) {
-            data = consumeStream(eof);
+            data = consumeStream();
             charStack.append(data);
         }
 
@@ -683,15 +654,13 @@ bool HTMLTokenizerPrivate::doctypeState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeDocTypeNameState;
         stateFn = &HTMLTokenizerPrivate::beforeDocTypeNameState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("expected-doctype-name-but-got-eof"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -713,15 +682,13 @@ bool HTMLTokenizerPrivate::beforeDocTypeNameState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
-    while (IS_SPACE_CHARACTER(data)) {
+    while (IS_SPACE_CHARACTER(data) && !streamAtEnd()) {
         initalPos = streamPos();
-        data = consumeStream(eof);
+        data = consumeStream();
     }
 
     if (IS_ASCII_UPPERCASE(data)) {
@@ -742,7 +709,7 @@ bool HTMLTokenizerPrivate::beforeDocTypeNameState()
         emitCurrentTagToken();
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("expected-doctype-name-but-got-eof"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -764,11 +731,9 @@ bool HTMLTokenizerPrivate::docTypeNameState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
+    int initalPos = streamPos();
 
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    QChar data = consumeStream();
     if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::AfterDocTypeNameState;
         stateFn = &HTMLTokenizerPrivate::afterDocTypeNameState;
@@ -781,7 +746,7 @@ bool HTMLTokenizerPrivate::docTypeNameState()
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
         currentToken->name.append(QChar::ReplacementCharacter);
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype-name"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -801,22 +766,20 @@ bool HTMLTokenizerPrivate::afterDocTypeNameState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
-    while (IS_SPACE_CHARACTER(data)) {
+    while (IS_SPACE_CHARACTER(data) && !streamAtEnd()) {
         initalPos = streamPos();
-        data = consumeStream(eof); // Ignore the character.
+        data = consumeStream(); // Ignore the character.
     }
 
     if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -830,7 +793,7 @@ bool HTMLTokenizerPrivate::afterDocTypeNameState()
             QString charStack = data;
             // consume more 5 chars
             for (int i = 0; i < 5; ++i) {
-                data = consumeStream(eof);
+                data = consumeStream();
                 charStack.append(data);
             }
 
@@ -859,11 +822,8 @@ bool HTMLTokenizerPrivate::afterDocTypePublicKeywordState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeDocTypePublicIdentifierState;
@@ -884,7 +844,7 @@ bool HTMLTokenizerPrivate::afterDocTypePublicKeywordState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -906,15 +866,13 @@ bool HTMLTokenizerPrivate::beforeDocTypePublicIdentifierState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
     while (IS_SPACE_CHARACTER(data)) {
         initalPos = streamPos();
-        data = consumeStream(eof);
+        data = consumeStream();
     }
 
     if (data == '"') {
@@ -931,7 +889,7 @@ bool HTMLTokenizerPrivate::beforeDocTypePublicIdentifierState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -953,10 +911,8 @@ bool HTMLTokenizerPrivate::docTypePublicIdentifierDoubleQuotedState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (data == '"') {
         state = HTMLTokenizer::AfterDocTypePublicIdentifierState;
@@ -970,7 +926,7 @@ bool HTMLTokenizerPrivate::docTypePublicIdentifierDoubleQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -988,10 +944,8 @@ bool HTMLTokenizerPrivate::docTypePublicIdentifierSingleQuotedState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (data == '\'') {
         state = HTMLTokenizer::AfterDocTypePublicIdentifierState;
@@ -1005,7 +959,7 @@ bool HTMLTokenizerPrivate::docTypePublicIdentifierSingleQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -1023,10 +977,8 @@ bool HTMLTokenizerPrivate::afterDocTypePublicIdentifierState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BetweenDocTypePublicAndSystemIdentifierState;
@@ -1045,7 +997,7 @@ bool HTMLTokenizerPrivate::afterDocTypePublicIdentifierState()
         currentToken->doctypeSystemId = "";
         state = HTMLTokenizer::DocTypeSystemIdentifierSingleQuotedState;
         stateFn = &HTMLTokenizerPrivate::docTypeSystemIdentifierSingleQuotedState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -1066,15 +1018,13 @@ bool HTMLTokenizerPrivate::betweenDocTypePublicAndSystemIdentifierState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
     while (IS_SPACE_CHARACTER(data)) {
         initalPos = streamPos();
-        data = consumeStream(eof);
+        data = consumeStream();
     }
 
     if (data == '>') {
@@ -1089,7 +1039,7 @@ bool HTMLTokenizerPrivate::betweenDocTypePublicAndSystemIdentifierState()
         currentToken->doctypeSystemId = "";
         state = HTMLTokenizer::DocTypeSystemIdentifierSingleQuotedState;
         stateFn = &HTMLTokenizerPrivate::docTypeSystemIdentifierSingleQuotedState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -1110,10 +1060,8 @@ bool HTMLTokenizerPrivate::afterDocTypeSystemKeywordState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeDocTypeSystemIdentifierState;
@@ -1132,7 +1080,7 @@ bool HTMLTokenizerPrivate::afterDocTypeSystemKeywordState()
         currentToken->doctypeSystemId = "";
         state = HTMLTokenizer::DocTypeSystemIdentifierSingleQuotedState;
         stateFn = &HTMLTokenizerPrivate::docTypeSystemIdentifierSingleQuotedState;
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -1153,15 +1101,13 @@ bool HTMLTokenizerPrivate::beforeDocTypeSystemIdentifierState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
-    while (IS_SPACE_CHARACTER(data)) {
+    while (IS_SPACE_CHARACTER(data) && !streamAtEnd()) {
         initalPos = streamPos();
-        data = consumeStream(eof);
+        data = consumeStream();
     }
 
     if (data == '"') {
@@ -1178,7 +1124,7 @@ bool HTMLTokenizerPrivate::beforeDocTypeSystemIdentifierState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -1199,10 +1145,8 @@ bool HTMLTokenizerPrivate::docTypeSystemIdentifierDoubleQuotedState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (data == '"') {
         state = HTMLTokenizer::AfterDocTypeSystemIdentifierState;
@@ -1218,7 +1162,7 @@ bool HTMLTokenizerPrivate::docTypeSystemIdentifierDoubleQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -1236,10 +1180,8 @@ bool HTMLTokenizerPrivate::docTypeSystemIdentifierSingleQuotedState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (data == '\'') {
         state = HTMLTokenizer::AfterDocTypeSystemIdentifierState;
@@ -1255,7 +1197,7 @@ bool HTMLTokenizerPrivate::docTypeSystemIdentifierSingleQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -1273,22 +1215,20 @@ bool HTMLTokenizerPrivate::afterDocTypeSystemIdentifierState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     // Ignore all space characters
-    while (IS_SPACE_CHARACTER(data)) {
+    while (IS_SPACE_CHARACTER(data) && !streamAtEnd()) {
         initalPos = streamPos();
-        data = consumeStream(eof);
+        data = consumeStream();
     }
 
     if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         Q_EMIT q->parserError(QStringLiteral("eof-in-doctype"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
@@ -1309,16 +1249,14 @@ bool HTMLTokenizerPrivate::bogusDocTypeState()
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
-    QChar data;
-    bool eof;
-    data = consumeStream(eof);
+    int initalPos = streamPos();
+    QChar data = consumeStream();
 
     if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
-    } else if (eof) {
+    } else if (streamAtEnd()) {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
@@ -1338,12 +1276,12 @@ QString HTMLTokenizerPrivate::consumeEntity(QChar *allowedChar)
 {
     Q_Q(HTMLTokenizer);
 
-    qint64 initalPos = streamPos();
+    int initalPos = streamPos();
     QString output = QStringLiteral("&");
 
     QChar data;
     bool eof;
-    data = consumeStream(eof);
+    data = consumeStream();
     if (IS_SPACE_CHARACTER(data) ||
             data == 0x003C || // Less-Than sign
             data == 0x0026 || // Ampersand
@@ -1356,7 +1294,7 @@ QString HTMLTokenizerPrivate::consumeEntity(QChar *allowedChar)
     } else if (data == 0x0023) { // Number sign (#)
         output.append(data);
 
-        data = consumeStream(eof);
+        data = consumeStream();
         QChar number;
         if (data == 0x0078 || // Latin small letter X
                 data == 0x0058) { // Latin capital letter X
@@ -1385,23 +1323,21 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
 
     QChar ret;
     QString charStack;
-    QChar c;
-    qint64 lastPos = streamPos();
-    bool eof;
-    c = consumeStream(eof);
+    QChar c = consumeStream();
+    int lastPos = streamPos();
     if (isHex) {
         while (IS_ASCII_HEX_DIGITS(c) &&
                !streamAtEnd()) {
             charStack.append(c); // store the position to rewind for ;
             lastPos = streamPos();
-            c = consumeStream(eof);
+            c = consumeStream();
         }
     } else {
         while (IS_ASCII_DIGITS(c) && // Zero (0) to Nine (9)
                !streamAtEnd()) {
             charStack.append(c);
             lastPos = streamPos(); // store the position to rewind for ;
-            c = consumeStream(eof);
+            c = consumeStream();
         }
     }
 

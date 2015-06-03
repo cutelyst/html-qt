@@ -96,13 +96,11 @@ public:
     bool cDataSectionState();
 
     // auxiliary methods
-    inline QChar consumeStream(bool &eof)
+    inline QChar consumeStream()
     {
         if (++htmlPos > html.size() || htmlPos < 0) {
-            eof = true;
             return QChar();
         } else {
-            eof = false;
             return html.at(htmlPos);
         }
     }
