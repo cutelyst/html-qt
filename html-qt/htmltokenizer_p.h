@@ -16,6 +16,15 @@ public:
     };
     HTMLToken(Type tokenType) : type(tokenType) {}
 
+    void appendDataCurrentAttributeValue(const QChar &c)
+    {
+        if (data.isEmpty()) {
+            data.append(qMakePair<QString,QString>("", c));
+        } else {
+            data.last().second.append(c);
+        }
+    }
+
     QString name;
     Type type;
     QList<QPair<QString,QString> > data;
