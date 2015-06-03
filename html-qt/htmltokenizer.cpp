@@ -20,7 +20,8 @@
     data == 0x000C || /* FORM FEED (FF) */ \
     data == QChar::Space) // SPACE
 
-HTMLTokenizer::HTMLTokenizer() : d_ptr(new HTMLTokenizerPrivate)
+HTMLTokenizer::HTMLTokenizer(QObject *parent) : QObject(parent)
+  , d_ptr(new HTMLTokenizerPrivate)
 {
     d_ptr->q_ptr = this;
 
@@ -43,6 +44,8 @@ void HTMLTokenizer::setHtmlText(const QString &html)
 {
     Q_D(HTMLTokenizer);
     d->html = html;
+    d->htmlPos = -1;
+    d->htmlSize = html.size();
 }
 
 HTMLTokenizer::State HTMLTokenizer::state() const
@@ -132,7 +135,7 @@ bool HTMLTokenizerPrivate::tagOpenState()
         state = HTMLTokenizer::TagNameState;
         stateFn = &HTMLTokenizerPrivate::tagNameState;
         currentToken = new HTMLToken(HTMLToken::StartTagToken);
-        currentToken->name = data + 0x0020;
+        currentToken->name = data.toLower();
     } else if (IS_ASCII_LOWERCASE(data)) {
         state = HTMLTokenizer::TagNameState;
         stateFn = &HTMLTokenizerPrivate::tagNameState;
@@ -162,13 +165,13 @@ bool HTMLTokenizerPrivate::endTagOpenState()
 
     if (IS_ASCII_UPPERCASE(data)) {
         currentToken = new HTMLToken(HTMLToken::EndTagToken);
-        currentToken->name = data + 0x0020;
+        currentToken->name = data.toLower();
         currentToken->selfClosing = false;
         state = HTMLTokenizer::TagNameState;
         stateFn = &HTMLTokenizerPrivate::tagNameState;
     } else if (IS_ASCII_LOWERCASE(data)) {
         currentToken = new HTMLToken(HTMLToken::EndTagToken);
-        currentToken->name = data + 0x0020;
+        currentToken->name = data;
         currentToken->selfClosing = false;
         state = HTMLTokenizer::TagNameState;
         stateFn = &HTMLTokenizerPrivate::tagNameState;
@@ -209,7 +212,7 @@ bool HTMLTokenizerPrivate::tagNameState()
         emitCurrentTagToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         // Appending the lower case version
-        currentToken->name.append(data + 0x0020);
+        currentToken->name.append(data.toLower());
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
         currentToken->name.append(QChar::ReplacementCharacter);
@@ -245,7 +248,7 @@ bool HTMLTokenizerPrivate::beforeAttributeNameState()
         emitCurrentTagToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         // Appending the lower case version
-        currentToken->data.append(qMakePair(data + 0x0020, QString()));
+        currentToken->data.append(qMakePair(data.toLower(), QString()));
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     } else if (data.isNull()) {
@@ -337,7 +340,7 @@ bool HTMLTokenizerPrivate::afterAttributeNameState()
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
-        currentToken->data.append(qMakePair<QString,QString>(data + 0x0020, QString()));
+        currentToken->data.append(qMakePair<QString,QString>(data.toLower(), QString()));
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     } else if (data.isNull()) {
@@ -833,7 +836,7 @@ bool HTMLTokenizerPrivate::beforeDocTypeNameState()
 
     if (IS_ASCII_UPPERCASE(data)) {
         currentToken = new HTMLToken(HTMLToken::DocTypeToken);
-        currentToken->name = data + 0x0020;
+        currentToken->name = data.toLower();
         state = HTMLTokenizer::DocTypeNameState;
         stateFn = &HTMLTokenizerPrivate::docTypeNameState;
     } else if (data.isNull()) {
@@ -880,7 +883,7 @@ bool HTMLTokenizerPrivate::docTypeNameState()
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
-        currentToken->name.append(data + 0x0020);
+        currentToken->name.append(data.toLower());
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
         currentToken->name.append(QChar::ReplacementCharacter);
@@ -1513,6 +1516,20 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
 
 void HTMLTokenizerPrivate::emitCurrentTagToken()
 {
+    Q_Q(HTMLTokenizer);
+
 //    qDebug() << "emitCurrentTagToken" << currentToken;
+    HTMLToken *token = currentToken;
+    if (token->type == HTMLToken::EndTagToken) {
+        if (!token->data.isEmpty()) {
+            Q_EMIT q->parserError(QString("attributes-in-end-tag"));
+        }
+
+        if (token->selfClosing) {
+            Q_EMIT q->parserError(QString("self-closing-flag-on-end-tag"));
+        }
+    }
+    Q_EMIT q->token(token);
+
     currentToken = 0;
 }

@@ -3,6 +3,7 @@
 
 #include <QObject>
 
+class HTMLToken;
 class HTMLTokenizerPrivate;
 class HTMLTokenizer : public QObject
 {
@@ -80,7 +81,7 @@ public:
         BogusDocTypeState,
         CDataSectionState,
     };
-    HTMLTokenizer();
+    explicit HTMLTokenizer(QObject *parent = 0);
     ~HTMLTokenizer();
 
     void setHtmlText(const QString &html);
@@ -93,6 +94,7 @@ Q_SIGNALS:
     void character(const QChar &c);
     void characterString(const QString &string);
     void parserError(const QString &error);
+    void token(HTMLToken *token);
 
 protected:
     HTMLTokenizerPrivate *d_ptr;

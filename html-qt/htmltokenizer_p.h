@@ -98,7 +98,7 @@ public:
     // auxiliary methods
     inline QChar consumeStream()
     {
-        if (++htmlPos > html.size() || htmlPos < 0) {
+        if (++htmlPos > htmlSize || htmlPos < 0) {
             return QChar();
         } else {
             return html.at(htmlPos);
@@ -118,7 +118,7 @@ public:
     }
 
     inline bool streamAtEnd() {
-        return htmlPos > html.size();
+        return htmlPos > htmlSize;
     }
 
     QString consumeEntity(QChar *allowedChar = 0);
@@ -131,6 +131,7 @@ public:
     HTMLTokenizer *q_ptr;
     QString html;
     int htmlPos = -1;
+    int htmlSize = 0;
     HTMLTokenizer::State state = HTMLTokenizer::DataState;
     HTMLTokenizerPrivateMemFn stateFn = &HTMLTokenizerPrivate::dataState;
     QMap<int,int> replacementCharacters = {

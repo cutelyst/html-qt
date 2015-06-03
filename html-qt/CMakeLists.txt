@@ -7,10 +7,13 @@ include_directories(
 set(htmlqt_SRC
     htmltokenizer.cpp
     htmltokenizer_p.h
+    htmlparser.cpp
+    htmlparser_p.h
 )
 
 set(htmlqt_HEADERS
     htmltokenizer.h
+    htmlparser.h
 )
 
 # set(htmlqt_HEADERS_PRIVATE

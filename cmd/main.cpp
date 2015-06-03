@@ -9,7 +9,7 @@
 #include <QTextStream>
 #include <QFile>
 
-#include "../html-qt/htmltokenizer.h"
+#include "../html-qt/htmlparser.h"
 
 int main(int argc, char *argv[])
 {
@@ -48,14 +48,10 @@ int main(int argc, char *argv[])
         parser.showHelp(1);
     }
 
-    HTMLTokenizer tokenizer;
+    HTMLParser htmlParser;
     QTime t;
     t.start();
-    tokenizer.setHtmlText(in->readAll());
-    qDebug("Time elapsed: %d ms", t.elapsed());
-//    tokenizer.setTextStream(in);
-    t.start();
-    tokenizer.start();
+    htmlParser.parse(in->readAll());
     qDebug("Time elapsed: %d ms", t.elapsed());
 
     return 0;
