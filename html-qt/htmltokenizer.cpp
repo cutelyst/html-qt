@@ -449,6 +449,38 @@ bool HTMLTokenizerPrivate::attributeValueSingleQuotedState()
 
 bool HTMLTokenizerPrivate::attributeValueUnquotedState()
 {
+    Q_Q(HTMLTokenizer);
+
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
+
+    if (IS_SPACE_CHARACTER(data)) {
+        state = HTMLTokenizer::BeforeAttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::beforeAttributeNameState;
+    } else if (data == '&') {
+        // TODO process next >
+        state = HTMLTokenizer::CharacterReferenceInAttributeValueState;
+        stateFn = &HTMLTokenizerPrivate::characterReferenceInAttributeValueState;
+    } else if (data == '>') {
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        emitCurrentTagToken();
+    } else if (data.isNull()) {
+        Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
+        currentToken->appendDataCurrentAttributeValue(QChar::ReplacementCharacter);
+    } else if (data == '"' || data == '\'' || data == '<' || data == '`') {
+        Q_EMIT q->parserError(QStringLiteral("unexpected-character-in-unquoted-attribute-value"));
+        currentToken->appendDataCurrentAttributeValue(data);
+    } else if (IS_STREAM_EOF(stream)) {
+        Q_EMIT q->parserError(QStringLiteral("eof-in-attribute-value-no-quotes"));
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        stream->seek(initalPos);
+    } else {
+        currentToken->appendDataCurrentAttributeValue(data);
+    }
+
     return true;
 }
 
@@ -459,12 +491,62 @@ bool HTMLTokenizerPrivate::characterReferenceInAttributeValueState()
 
 bool HTMLTokenizerPrivate::afterAttributeValueQuotedState()
 {
+    Q_Q(HTMLTokenizer);
+
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
+
+    if (IS_SPACE_CHARACTER(data)) {
+        state = HTMLTokenizer::BeforeAttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::beforeAttributeNameState;
+    } else if (data == '/') {
+        state = HTMLTokenizer::SelfClosingStartTagState;
+        stateFn = &HTMLTokenizerPrivate::selfClosingStartTagState;
+    } else if (data == '>') {
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        emitCurrentTagToken();
+    } else if (IS_STREAM_EOF(stream)) {
+        Q_EMIT q->parserError(QStringLiteral("unexpected-EOF-after-attribute-value"));
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        stream->seek(initalPos);
+    } else {
+        Q_EMIT q->parserError(QStringLiteral("unexpected-character-after-attribute-value"));
+        state = HTMLTokenizer::BeforeAttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::beforeAttributeNameState;
+        stream->seek(initalPos);
+    }
 
     return true;
 }
 
 bool HTMLTokenizerPrivate::selfClosingStartTagState()
 {
+    Q_Q(HTMLTokenizer);
+
+    qint64 initalPos = stream->pos();
+    QChar data;
+    *stream >> data;
+
+    if (data == '>') {
+        currentToken->selfClosing = true;
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        emitCurrentTagToken();
+    } else if (IS_STREAM_EOF(stream)) {
+        Q_EMIT q->parserError(QStringLiteral("unexpected-EOF-after-solidus-in-tag"));
+        state = HTMLTokenizer::DataState;
+        stateFn = &HTMLTokenizerPrivate::dataState;
+        stream->seek(initalPos);
+    } else {
+        Q_EMIT q->parserError(QStringLiteral("unexpected-character-after-solidus-in-tag"));
+        state = HTMLTokenizer::BeforeAttributeNameState;
+        stateFn = &HTMLTokenizerPrivate::beforeAttributeNameState;
+        stream->seek(initalPos);
+    }
+
     return true;
 }
 
