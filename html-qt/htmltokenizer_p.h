@@ -16,7 +16,6 @@ public:
         EndTagToken,
         CommentToken,
         DocTypeToken,
-        CharacterToken
     };
     HTMLToken(Type tokenType) : type(tokenType) {}
 

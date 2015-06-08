@@ -22,10 +22,11 @@
     data == 0x000C || /* FORM FEED (FF) */ \
     data == QChar::Space) // SPACE
 
-HTMLTokenizer::HTMLTokenizer(HTMLParser *parent) : QObject(parent)
+HTMLTokenizer::HTMLTokenizer(HTMLParser *parser) : QObject(parser)
   , d_ptr(new HTMLTokenizerPrivate)
 {
     d_ptr->q_ptr = this;
+    d_ptr->parser = parser;
 
     // TODO https://html.spec.whatwg.org/multipage/entities.json
     // get from the url and/or keep a local copy

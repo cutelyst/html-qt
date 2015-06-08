@@ -82,7 +82,7 @@ public:
         BogusDocTypeState,
         CDataSectionState,
     };
-    HTMLTokenizer(HTMLParser *parent);
+    HTMLTokenizer(HTMLParser *parser);
     ~HTMLTokenizer();
 
     void setHtmlText(const QString &html);
