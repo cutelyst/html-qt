@@ -1,6 +1,9 @@
 #include "htmlparser_p.h"
 
+#include <QMetaEnum>
 #include <QDebug>
+
+#define CALL_MEMBER_FN(object,ptrToMember)  ((object).*(ptrToMember))
 
 HTMLParser::HTMLParser(QObject *parent) : QObject(parent)
   , d_ptr(new HTMLParserPrivate)
@@ -27,6 +30,11 @@ void HTMLParser::parse(const QString &html)
     d->tokenizer->start();
 }
 
+bool HTMLParserPrivate::initial(HTMLToken *token)
+{
+    return true;
+}
+
 void HTMLParserPrivate::characterToken(const QChar &c)
 {
     qDebug() << c;
@@ -45,4 +53,6 @@ void HTMLParserPrivate::parserErrorToken(const QString &string)
 void HTMLParserPrivate::parseToken(HTMLToken *token)
 {
     qDebug() << token->type << token->name;
+    bool ret = CALL_MEMBER_FN(*this, phaseFn)(token);
+    qDebug() << ret << HTMLParser::staticQtMetaObject.enumerator(0).key(phase);
 }

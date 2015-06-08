@@ -149,7 +149,7 @@ bool HTMLTokenizerPrivate::tagOpenState()
         q->parserError(QStringLiteral("expected-tag-name"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        q->character(0x003C); // LESS-THAN SIGN <
+        q->character('<'); // LESS-THAN SIGN <
         streamUnconsume();
     }
 
@@ -1405,22 +1405,19 @@ QString HTMLTokenizerPrivate::consumeEntity(QChar *allowedChar)
     QChar data;
     bool eof;
     data = consumeStream();
-    if (IS_SPACE_CHARACTER(data) ||
-            data == 0x003C || // Less-Than sign
-            data == 0x0026 || // Ampersand
+    if (IS_SPACE_CHARACTER(data) || data == '<' || data == '&' ||
             eof || // EOF
             (allowedChar && data == *allowedChar)) {
         // Not a character reference. No characters are consumed,
         // and nothing is returned. (This is not an error, either.)
         streamSeek(initalPos);
         return QString();
-    } else if (data == 0x0023) { // Number sign (#)
+    } else if (data == '#') {
         output.append(data);
 
         data = consumeStream();
         QChar number;
-        if (data == 0x0078 || // Latin small letter X
-                data == 0x0058) { // Latin capital letter X
+        if (data == 'x' || data == 'X') {
             number = consumeNumberEntity(true);
         } else {
             number = consumeNumberEntity(false);
@@ -1471,7 +1468,7 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
 
     // Discard the ; if present. Otherwise, put it back on the queue and
     // invoke parseError on parser.
-    if (c != 0x003B) {
+    if (c != ';') {
         q->parserError(QStringLiteral("numeric-entity-without-semicolon"));
         streamSeek(lastPos);
     }
@@ -1488,8 +1485,7 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
     if (it != replacementCharacters.constEnd()) {
         ret = it.value();
         q->parserError(QString("illegal-codepoint-for-numeric-entity: %1").arg(charStack));
-    } else if ((charAsInt >= 0xD800 && charAsInt <= 0xDFFF) ||
-               charAsInt > 0x10FFFF) {
+    } else if ((charAsInt >= 0xD800 && charAsInt <= 0xDFFF) || charAsInt > 0x10FFFF) {
         ret = QChar::ReplacementCharacter;
         q->parserError(QString("illegal-codepoint-for-numeric-entity: %1").arg(charStack));
     } else {

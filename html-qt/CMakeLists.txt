@@ -9,11 +9,13 @@ set(htmlqt_SRC
     htmltokenizer_p.h
     htmlparser.cpp
     htmlparser_p.h
+    htmltree.cpp
 )
 
 set(htmlqt_HEADERS
     htmltokenizer.h
     htmlparser.h
+    htmltree.h
 )
 
 # set(htmlqt_HEADERS_PRIVATE

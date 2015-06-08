@@ -15,7 +15,8 @@ public:
         StartTagToken,
         EndTagToken,
         CommentToken,
-        DocTypeToken
+        DocTypeToken,
+        CharacterToken
     };
     HTMLToken(Type tokenType) : type(tokenType) {}
 
@@ -37,7 +38,7 @@ public:
         }
     }
 
-    QString name; // or data for comment
+    QString name; // or data for comment or character types
     Type type;
     QList<QPair<QString,QString> > data;
     bool selfClosing = false;
