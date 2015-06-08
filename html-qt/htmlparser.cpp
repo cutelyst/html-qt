@@ -1,9 +1,9 @@
 #include "htmlparser_p.h"
 
+#include "htmliminitial.h"
+
 #include <QMetaEnum>
 #include <QDebug>
-
-#define CALL_MEMBER_FN(object,ptrToMember)  ((object).*(ptrToMember))
 
 HTMLParser::HTMLParser(QObject *parent) : QObject(parent)
   , d_ptr(new HTMLParserPrivate)
@@ -11,6 +11,33 @@ HTMLParser::HTMLParser(QObject *parent) : QObject(parent)
     Q_D(HTMLParser);
 
     d->tokenizer = new HTMLTokenizer(this);
+
+    HTMLTree *tree = new HTMLTree;
+    d->imInitial = new HTMLIMInitial(this, tree);
+    d->imBeforeHTML = new HTMLInsertMode(this, tree);
+    d->imBeforeHead = new HTMLInsertMode(this, tree);
+    d->imInHead = new HTMLInsertMode(this, tree);
+    d->imInHeadNoScript = new HTMLInsertMode(this, tree);
+    d->imAfterHead = new HTMLInsertMode(this, tree);
+    d->imInBody = new HTMLInsertMode(this, tree);
+    d->imText = new HTMLInsertMode(this, tree);
+    d->imInTable = new HTMLInsertMode(this, tree);
+    d->imInTableText = new HTMLInsertMode(this, tree);
+    d->imInCaption = new HTMLInsertMode(this, tree);
+    d->imInColumGroup = new HTMLInsertMode(this, tree);
+    d->imInTableBody = new HTMLInsertMode(this, tree);
+    d->imInRow = new HTMLInsertMode(this, tree);
+    d->imInCell = new HTMLInsertMode(this, tree);
+    d->imInSelect = new HTMLInsertMode(this, tree);
+    d->imInSelectInTable = new HTMLInsertMode(this, tree);
+    d->imInTemplate = new HTMLInsertMode(this, tree);
+    d->imAfterBody = new HTMLInsertMode(this, tree);
+    d->imInFrameset = new HTMLInsertMode(this, tree);
+    d->imAfterFrameset = new HTMLInsertMode(this, tree);
+    d->imAfterAfterBody = new HTMLInsertMode(this, tree);
+    d->imAfterAfterFrameset = new HTMLInsertMode(this, tree);
+    d->insertionMode = d->imInitial;
+    d->tree = tree;
 }
 
 HTMLParser::~HTMLParser()
@@ -54,54 +81,4 @@ void HTMLParser::parseToken(HTMLToken *token)
         d->insertionMode->processDoctype(token);
         break;
     }
-}
-
-HTMLParserPrivate::HTMLParserPrivate()
-{
-    imInitial = new HTMLInsertMode;
-    imBeforeHTML = new HTMLInsertMode;
-    imBeforeHead = new HTMLInsertMode;
-    imInHead = new HTMLInsertMode;
-    imInHeadNoScript = new HTMLInsertMode;
-    imAfterHead = new HTMLInsertMode;
-    imInBody = new HTMLInsertMode;
-    imText = new HTMLInsertMode;
-    imInTable = new HTMLInsertMode;
-    imInTableText = new HTMLInsertMode;
-    imInCaption = new HTMLInsertMode;
-    imInColumGroup = new HTMLInsertMode;
-    imInTableBody = new HTMLInsertMode;
-    imInRow = new HTMLInsertMode;
-    imInCell = new HTMLInsertMode;
-    imInSelect = new HTMLInsertMode;
-    imInSelectInTable = new HTMLInsertMode;
-    imInTemplate = new HTMLInsertMode;
-    imAfterBody = new HTMLInsertMode;
-    imInFrameset = new HTMLInsertMode;
-    imAfterFrameset = new HTMLInsertMode;
-    imAfterAfterBody = new HTMLInsertMode;
-    imAfterAfterFrameset = new HTMLInsertMode;
-    insertionMode = imInitial;
-}
-
-bool HTMLParserPrivate::initial(HTMLToken *token)
-{
-    return true;
-}
-
-void HTMLParserPrivate::characterToken(const QChar &c)
-{
-//    qDebug() << c;
-}
-
-void HTMLParserPrivate::parserErrorToken(const QString &string)
-{
-    qDebug() << string;
-}
-
-void HTMLParserPrivate::parseToken(HTMLToken *token)
-{
-    qDebug() << token->type << token->name;
-    bool ret = CALL_MEMBER_FN(*this, phaseFn)(token);
-    qDebug() << ret << HTMLParser::staticQtMetaObject.enumerator(0).key(phase);
 }

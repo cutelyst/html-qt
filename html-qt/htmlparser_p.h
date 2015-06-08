@@ -7,26 +7,15 @@
 
 #include "htmlinsertmode.h"
 
-typedef  bool (HTMLParserPrivate::*HTMLParserPrivateMemFn)(HTMLToken *);
-
 class HTMLParserPrivate : public QObject
 {
     Q_OBJECT
 public:
-    HTMLParserPrivate();
-
-    bool initial(HTMLToken *token);
-
-    void characterToken(const QChar &c);
-    void parserErrorToken(const QString &string);
-    void parseToken(HTMLToken *token);
-
     QString html;
     HTMLTokenizer *tokenizer;
     HTMLTree *tree;
     HTMLInsertMode *insertionMode;
-    HTMLParser::InsertionMode phase = HTMLParser::Initial;
-    HTMLParserPrivateMemFn phaseFn = &HTMLParserPrivate::initial;
+    HTMLParser::InsertionMode insertionModeEnum = HTMLParser::Initial;
 
     HTMLInsertMode *imInitial;
     HTMLInsertMode *imBeforeHTML;

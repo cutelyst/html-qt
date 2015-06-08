@@ -1,13 +1,20 @@
 #include "htmlinsertmode.h"
+#include "htmlparser.h"
 
-HTMLInsertMode::HTMLInsertMode()
+HTMLInsertMode::HTMLInsertMode(HTMLParser *parser, HTMLTree *tree)
 {
-
+    this->tree = tree;
+    this->parser = parser;
 }
 
 HTMLInsertMode::~HTMLInsertMode()
 {
 
+}
+
+HTMLParserPrivate *HTMLInsertMode::parserPriv()
+{
+    return parser->d_ptr;
 }
 
 bool HTMLInsertMode::processCharacter(const QChar &c)

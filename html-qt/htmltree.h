@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QStringList>
 
+class HTMLToken;
 class HTMLTreeNode;
 class HTMLTree
 {
@@ -11,7 +12,13 @@ public:
     HTMLTree();
     ~HTMLTree();
 
+    HTMLTreeNode *document();
+
     void inserText();
+
+    void insertDoctype(HTMLToken *token);
+
+    void insertComment(const QString &comment, HTMLTreeNode *parent);
 
 private:
     HTMLTreeNode *createNode(int &pos, int lastPos, bool plainText, HTMLTreeNode *parent);

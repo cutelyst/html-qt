@@ -3,12 +3,19 @@
 
 #include <QObject>
 
+class HTMLParserPrivate;
+class HTMLParser;
+class HTMLTree;
 class HTMLToken;
 class HTMLInsertMode
 {
 public:
-    HTMLInsertMode();
-    ~HTMLInsertMode();
+    HTMLInsertMode(HTMLParser *parser, HTMLTree *tree);
+    virtual ~HTMLInsertMode();
+
+    HTMLTree *tree;
+    HTMLParser *parser;
+    HTMLParserPrivate *parserPriv();
 
     virtual bool processCharacter(const QChar &c);
 

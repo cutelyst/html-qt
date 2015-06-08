@@ -1,5 +1,7 @@
 #include "htmltree.h"
 
+#include "htmltokenizer_p.h"
+
 #include <QDebug>
 
 class HTMLTreeNode
@@ -20,6 +22,21 @@ HTMLTree::HTMLTree()
 }
 
 HTMLTree::~HTMLTree()
+{
+
+}
+
+HTMLTreeNode *HTMLTree::document()
+{
+    return m_root;
+}
+
+void HTMLTree::insertDoctype(HTMLToken *token)
+{
+
+}
+
+void HTMLTree::insertComment(const QString &comment, HTMLTreeNode *parent)
 {
 
 }
