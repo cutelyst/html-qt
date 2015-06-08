@@ -14,7 +14,6 @@ public:
     bool initial(HTMLToken *token);
 
     void characterToken(const QChar &c);
-    void charactersToken(const QString &string);
     void parserErrorToken(const QString &string);
     void parseToken(HTMLToken *token);
 

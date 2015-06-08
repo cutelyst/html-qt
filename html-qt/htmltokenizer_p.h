@@ -20,6 +20,15 @@ public:
     };
     HTMLToken(Type tokenType) : type(tokenType) {}
 
+    void appendDataCurrentAttributeName(const QChar &c)
+    {
+        if (data.isEmpty()) {
+            data.append(qMakePair<QString,QString>(c, ""));
+        } else {
+            data.last().first.append(c);
+        }
+    }
+
     void appendDataCurrentAttributeValue(const QChar &c)
     {
         if (data.isEmpty()) {
@@ -97,12 +106,13 @@ public:
     bool cDataSectionState();
 
     // auxiliary methods
-    inline QChar consumeStream()
+    inline bool consumeStream(QChar &c)
     {
         if (++htmlPos > htmlSize || htmlPos < 0) {
-            return QChar();
+            return false;
         } else {
-            return html.at(htmlPos);
+            c = html.at(htmlPos);
+            return true;
         }
     }
 
@@ -118,6 +128,10 @@ public:
         htmlPos -= nChars;
     }
 
+    inline bool streamCanRead(int nChars = 1) {
+        return htmlPos + nChars < htmlSize;
+    }
+
     inline bool streamAtEnd() {
         return htmlPos > htmlSize;
     }
@@ -130,6 +144,7 @@ public:
     HTMLToken *currentToken;
 
     HTMLTokenizer *q_ptr;
+    HTMLParser *parser;
     QString html;
     int htmlPos = -1;
     int htmlSize = 0;

@@ -11,10 +11,9 @@ HTMLParser::HTMLParser(QObject *parent) : QObject(parent)
     Q_D(HTMLParser);
 
     d->tokenizer = new HTMLTokenizer(this);
-    connect(d->tokenizer, &HTMLTokenizer::character, d, &HTMLParserPrivate::characterToken);
-    connect(d->tokenizer, &HTMLTokenizer::characterString, d, &HTMLParserPrivate::charactersToken);
-    connect(d->tokenizer, &HTMLTokenizer::parserError, d, &HTMLParserPrivate::parserErrorToken);
-    connect(d->tokenizer, &HTMLTokenizer::token, d, &HTMLParserPrivate::parseToken);
+//    connect(d->tokenizer, &HTMLTokenizer::character, d, &HTMLParserPrivate::characterToken);
+//    connect(d->tokenizer, &HTMLTokenizer::parserError, d, &HTMLParserPrivate::parserErrorToken);
+//    connect(d->tokenizer, &HTMLTokenizer::token, d, &HTMLParserPrivate::parseToken);
 }
 
 HTMLParser::~HTMLParser()
@@ -30,6 +29,21 @@ void HTMLParser::parse(const QString &html)
     d->tokenizer->start();
 }
 
+void HTMLParser::characterToken(const QChar &c)
+{
+
+}
+
+void HTMLParser::parserErrorToken(const QString &string)
+{
+
+}
+
+void HTMLParser::parseToken(HTMLToken *token)
+{
+
+}
+
 bool HTMLParserPrivate::initial(HTMLToken *token)
 {
     return true;
@@ -37,12 +51,7 @@ bool HTMLParserPrivate::initial(HTMLToken *token)
 
 void HTMLParserPrivate::characterToken(const QChar &c)
 {
-    qDebug() << c;
-}
-
-void HTMLParserPrivate::charactersToken(const QString &string)
-{
-    qDebug() << string;
+//    qDebug() << c;
 }
 
 void HTMLParserPrivate::parserErrorToken(const QString &string)

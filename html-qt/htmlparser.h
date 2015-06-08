@@ -3,6 +3,7 @@
 
 #include <QObject>
 
+class HTMLToken;
 class HTMLParserPrivate;
 class HTMLParser : public QObject
 {
@@ -42,6 +43,11 @@ public:
     void parse(const QString &html);
 
 protected:
+    void characterToken(const QChar &c);
+    void parserErrorToken(const QString &string);
+    void parseToken(HTMLToken *token);
+
+    friend class HTMLTokenizer;
     HTMLParserPrivate *d_ptr;
 };
 
