@@ -2,23 +2,13 @@
 
 #include "htmltokenizer_p.h"
 
-#include <QDebug>
+#include <QLoggingCategory>
 
-class HTMLTreeNode
-{
-public:
-    HTMLTreeNode *parent = 0;
-    QList<HTMLTreeNode *> children;
-    QStringRef type;
-    QStringRef text;
-    bool end = false;
-    bool plainText = true;
-};
-
+Q_LOGGING_CATEGORY(HTML_TREE, "htmlqt.tree")
 
 HTMLTree::HTMLTree()
 {
-
+    m_root = new HTMLTreeNode;
 }
 
 HTMLTree::~HTMLTree()
@@ -31,24 +21,36 @@ HTMLTreeNode *HTMLTree::document()
     return m_root;
 }
 
+void HTMLTree::inserText()
+{
+    qCDebug(HTML_TREE) << Q_FUNC_INFO;
+}
+
 void HTMLTree::insertDoctype(HTMLToken *token)
 {
-
+    qCDebug(HTML_TREE) << Q_FUNC_INFO << token;
+    m_root->token = token;
 }
 
 void HTMLTree::insertComment(const QString &comment, HTMLTreeNode *parent)
 {
+    qCDebug(HTML_TREE) << Q_FUNC_INFO;
+}
 
+void HTMLTree::dump()
+{
+    dumpTree(m_root);
 }
 
 HTMLTreeNode *HTMLTree::createNode(int &pos, int lastPos, bool plainText, HTMLTreeNode *parent)
 {
+    qCDebug(HTML_TREE) << Q_FUNC_INFO;
     return 0;
 }
 
 void HTMLTree::dumpTree(HTMLTreeNode *root, int level)
 {
-    qDebug() << QByteArray("-").repeated(level).data() << ">" << root->text;
+    qDebug() << QByteArray("-").repeated(level).data() << ">" << root->token->name;
     Q_FOREACH (HTMLTreeNode *node, root->children) {
         dumpTree(node, level + 1);
     }

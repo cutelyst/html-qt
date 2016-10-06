@@ -1,6 +1,10 @@
 #include "htmlinsertmode.h"
 #include "htmlparser.h"
 
+#include <QLoggingCategory>
+
+Q_LOGGING_CATEGORY(HTML_IM_INITIAL, "htmlqt.im")
+
 HTMLInsertMode::HTMLInsertMode(HTMLParser *parser, HTMLTree *tree)
 {
     this->tree = tree;

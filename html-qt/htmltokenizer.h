@@ -10,7 +10,6 @@ class HTMLTokenizer : public QObject
 {
     Q_OBJECT
     Q_DECLARE_PRIVATE(HTMLTokenizer)
-    Q_ENUMS(State)
 public:
     enum State {
         DataState,
@@ -82,6 +81,7 @@ public:
         BogusDocTypeState,
         CDataSectionState,
     };
+    Q_ENUM(State)
     HTMLTokenizer(HTMLParser *parser);
     ~HTMLTokenizer();
 

@@ -3,7 +3,9 @@
 #include "htmliminitial.h"
 
 #include <QMetaEnum>
-#include <QDebug>
+#include <QLoggingCategory>
+
+Q_LOGGING_CATEGORY(HTML_PARSER, "htmlqt.parser")
 
 HTMLParser::HTMLParser(QObject *parent) : QObject(parent)
   , d_ptr(new HTMLParserPrivate)
@@ -51,6 +53,7 @@ void HTMLParser::parse(const QString &html)
 
     d->tokenizer->setHtmlText(html);
     d->tokenizer->start();
+    d->tree->dump();
 }
 
 void HTMLParser::characterToken(const QChar &c)
@@ -59,13 +62,14 @@ void HTMLParser::characterToken(const QChar &c)
     d->insertionMode->processCharacter(c);
 }
 
-void HTMLParser::parserErrorToken(const QString &string)
+void HTMLParser::parserErrorToken(const QString &string, int pos)
 {
-    qDebug() << "parser-error" << string;
+    qCCritical(HTML_PARSER) << "parser-error" << string << pos;
 }
 
 void HTMLParser::parseToken(HTMLToken *token)
 {
+    qCCritical(HTML_PARSER) << "parseToken" << token << token->type;
     Q_D(HTMLParser);
     switch (token->type) {
     case HTMLToken::StartTagToken:

@@ -7,7 +7,9 @@
 #include <QMetaEnum>
 #include <QFile>
 #include <QStringBuilder>
-#include <QDebug>
+#include <QLoggingCategory>
+
+Q_LOGGING_CATEGORY(HTML_TOKENIZER, "htmlqt.tokenizer")
 
 #define CALL_MEMBER_FN(object,ptrToMember)  ((object).*(ptrToMember))
 
@@ -35,7 +37,7 @@ HTMLTokenizer::HTMLTokenizer(HTMLParser *parser) : QObject(parser)
         return;
     }
     QJsonDocument entities = QJsonDocument::fromBinaryData(entitiesFile.readAll());
-    qDebug() << entities.object();
+    qCDebug(HTML_TOKENIZER) << entities.object();
 }
 
 HTMLTokenizer::~HTMLTokenizer()
@@ -65,7 +67,7 @@ void HTMLTokenizer::start()
     int repeatedPos = 0;
     while (CALL_MEMBER_FN(*d, d->stateFn)() && !d->streamAtEnd()) {
         // dunno what to do here :)
-//        qDebug() << d->streamPos() << metaObject()->enumerator(0).key(d->state) << d->streamAtEnd();
+//        qCDebug(HTML_TOKENIZER) << d->state << d->streamPos() << d->streamAtEnd();
         if (lastPos == d->streamPos()) {
             if (++repeatedPos > 10) {
                 qFatal("Infinite loop detected on state: %s, at position: %d",
@@ -77,7 +79,7 @@ void HTMLTokenizer::start()
             repeatedPos = 0;
         }
     }
-    qDebug() << "finished";
+    qCDebug(HTML_TOKENIZER) << "finished";
 }
 
 void HTMLTokenizer::character(const QChar &c)
@@ -89,7 +91,7 @@ void HTMLTokenizer::character(const QChar &c)
 void HTMLTokenizer::parserError(const QString &error)
 {
     Q_D(HTMLTokenizer);
-    d->parser->parserErrorToken(error);
+    d->parser->parserErrorToken(error, d->streamPos());
 }
 
 void HTMLTokenizer::token(HTMLToken *token)
@@ -116,7 +118,7 @@ bool HTMLTokenizerPrivate::dataState()
         stateFn = &HTMLTokenizerPrivate::tagOpenState;
     } else if (data.isNull()) {
         state = HTMLTokenizer::TagOpenState;
-        Q_EMIT q->parserError("invalid-codepoint");
+        Q_EMIT q->parserError(QLatin1String("invalid-codepoint: ") + data);
         Q_EMIT q->character(data);
     } else {
         Q_EMIT q->character(data);
@@ -637,13 +639,13 @@ bool HTMLTokenizerPrivate::markupDeclarationOpenState()
 
         if (charStack.compare(QLatin1String("DOCTYPE"), Qt::CaseInsensitive) == 0) {
 //            currentToken = new HTMLToken(HTMLToken::CommentToken);
-            qDebug() << "markupDeclarationOpenState" << charStack;
+            qCDebug(HTML_TOKENIZER) << "markupDeclarationOpenState" << charStack;
             state = HTMLTokenizer::DocTypeState;
             stateFn = &HTMLTokenizerPrivate::doctypeState;
             return true;
         }
     } else if (data == '[') {
-        qWarning() << "markupDeclarationOpenState CDATA TODO";
+        qCWarning(HTML_TOKENIZER) << "markupDeclarationOpenState CDATA TODO";
     }
 
     Q_EMIT q->parserError(QStringLiteral("expected-dashes-or-doctype"));

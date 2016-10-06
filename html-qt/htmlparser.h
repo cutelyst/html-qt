@@ -9,7 +9,6 @@ class HTMLParser : public QObject
 {
     Q_OBJECT
     Q_DECLARE_PRIVATE(HTMLParser)
-    Q_ENUMS(InsertionMode)
 public:
     enum InsertionMode {
         Initial,
@@ -36,6 +35,7 @@ public:
         AfterAfterBody,
         AfterAfterFrameset,
     };
+    Q_ENUM(InsertionMode)
 
     explicit HTMLParser(QObject *parent = 0);
     ~HTMLParser();
@@ -44,11 +44,11 @@ public:
 
 protected:
     void characterToken(const QChar &c);
-    void parserErrorToken(const QString &string);
+    void parserErrorToken(const QString &string, int pos);
     void parseToken(HTMLToken *token);
 
     friend class HTMLTokenizer;
-    friend class HTMLInsertMode;
+//    friend class HTMLInsertMode;
 
     HTMLParserPrivate *d_ptr;
 };

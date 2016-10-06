@@ -3,9 +3,21 @@
 
 #include <QObject>
 #include <QStringList>
+#include <QVector>
 
 class HTMLToken;
-class HTMLTreeNode;
+class HTMLTreeNode
+{
+public:
+    HTMLTreeNode *parent = nullptr;
+    QVector<HTMLTreeNode *> children;
+    HTMLToken *token;
+    QStringRef type;
+    QStringRef text;
+    bool end = false;
+    bool plainText = true;
+};
+
 class HTMLTree
 {
 public:
@@ -19,6 +31,8 @@ public:
     void insertDoctype(HTMLToken *token);
 
     void insertComment(const QString &comment, HTMLTreeNode *parent);
+
+    void dump();
 
 private:
     HTMLTreeNode *createNode(int &pos, int lastPos, bool plainText, HTMLTreeNode *parent);

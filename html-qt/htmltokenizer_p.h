@@ -5,6 +5,7 @@
 
 #include <QPair>
 #include <QMap>
+#include <QDebug>
 
 typedef  bool (HTMLTokenizerPrivate::*HTMLTokenizerPrivateMemFn)();
 
@@ -107,7 +108,7 @@ public:
     // auxiliary methods
     inline bool consumeStream(QChar &c)
     {
-        if (++htmlPos > htmlSize || htmlPos < 0) {
+        if (++htmlPos >= htmlSize || htmlPos < 0) {
             return false;
         } else {
             c = html.at(htmlPos);
