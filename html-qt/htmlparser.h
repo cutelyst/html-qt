@@ -48,7 +48,7 @@ protected:
     void parseToken(HTMLToken *token);
 
     friend class HTMLTokenizer;
-//    friend class HTMLInsertMode;
+    friend class HTMLInsertMode;
 
     HTMLParserPrivate *d_ptr;
 };
