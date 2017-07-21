@@ -14,7 +14,7 @@ public:
     QString html;
     HTMLTokenizer *tokenizer;
     HTMLTree *tree;
-    HTMLAbstractPhase *insertionMode;
+    HTMLAbstractPhase *phase;
     HTMLParser::InsertionMode insertionModeEnum = HTMLParser::Initial;
 
     HTMLAbstractPhase *imInitial;
@@ -40,6 +40,8 @@ public:
     HTMLAbstractPhase *imAfterFrameset;
     HTMLAbstractPhase *imAfterAfterBody;
     HTMLAbstractPhase *imAfterAfterFrameset;
+
+    bool firstStartTag = false;
 };
 
 #endif // HTMLPARSER_P_H

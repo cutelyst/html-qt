@@ -1,6 +1,7 @@
 #include "htmlparser_p.h"
 
 #include "htmlinitialphase.h"
+#include "htmlbeforehtmlphase.h"
 
 #include <QMetaEnum>
 #include <QLoggingCategory>
@@ -16,7 +17,7 @@ HTMLParser::HTMLParser(QObject *parent) : QObject(parent)
 
     HTMLTree *tree = new HTMLTree;
     d->imInitial = new HTMLInitialPhase(this, tree);
-    d->imBeforeHTML = new HTMLAbstractPhase(this, tree);
+    d->imBeforeHTML = new HTMLBeforeHtmlPhase(this, tree);
     d->imBeforeHead = new HTMLAbstractPhase(this, tree);
     d->imInHead = new HTMLAbstractPhase(this, tree);
     d->imInHeadNoScript = new HTMLAbstractPhase(this, tree);
@@ -38,7 +39,7 @@ HTMLParser::HTMLParser(QObject *parent) : QObject(parent)
     d->imAfterFrameset = new HTMLAbstractPhase(this, tree);
     d->imAfterAfterBody = new HTMLAbstractPhase(this, tree);
     d->imAfterAfterFrameset = new HTMLAbstractPhase(this, tree);
-    d->insertionMode = d->imInitial;
+    d->phase = d->imInitial;
     d->tree = tree;
 }
 
@@ -56,10 +57,17 @@ void HTMLParser::parse(const QString &html)
     d->tree->dump();
 }
 
+void HTMLParser::reset()
+{
+    Q_D(HTMLParser);
+    d->tree->reset();
+    d->firstStartTag = false;
+}
+
 void HTMLParser::characterToken(const QChar &c)
 {
     Q_D(HTMLParser);
-    d->insertionMode->processCharacter(c);
+    d->phase->processCharacter(c);
 }
 
 void HTMLParser::parserErrorToken(const QString &string, int pos)
@@ -72,17 +80,26 @@ void HTMLParser::parseToken(HTMLToken *token)
     qCCritical(HTML_PARSER) << "parseToken" << token << token->type;
     Q_D(HTMLParser);
     switch (token->type) {
+    case HTMLToken::CharactersToken:
+        d->phase->processCharacter(token->dataStr.at(0));
+        break;
+    case HTMLToken::SpaceCharactersToken:
+        d->phase->processStartTag(token);
+        break;
     case HTMLToken::StartTagToken:
-        d->insertionMode->processStartTag(token);
+        d->phase->processStartTag(token);
         break;
     case HTMLToken::EndTagToken:
-        d->insertionMode->processEndTag(token);
+        d->phase->processEndTag(token);
         break;
     case HTMLToken::CommentToken:
-        d->insertionMode->processCommentTag(token);
+        d->phase->processCommentTag(token);
         break;
     case HTMLToken::DocTypeToken:
-        d->insertionMode->processDoctype(token);
+        d->phase->processDoctype(token);
+        break;
+    case HTMLToken::ParserErrorToken:
+        qDebug() << "error " << token;
         break;
     }
 }

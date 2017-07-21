@@ -92,7 +92,7 @@ public:
     void start();
 
 protected:
-    void character(const QChar &c);
+    void character(QChar c);
     void parserError(const QString &error);
     void token(HTMLToken *token);
 

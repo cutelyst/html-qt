@@ -11,11 +11,12 @@ class HTMLTreeNode
 {
 public:
     HTMLTreeNode(const QString &name = QString());
+    virtual ~HTMLTreeNode();
 
     QString name;
     HTMLTreeNode *parent = nullptr;
     QVector<HTMLTreeNode *> children;
-    QVector<std::pair<QString,QString> > attributes;
+    QMap<QString, QString> attributes;
     HTMLToken *token;
     QStringRef type;
     QString text;
@@ -58,19 +59,19 @@ class HTMLTree
 {
 public:
     HTMLTree(const QString &namespaceHTMLElements = QString());
-    ~HTMLTree();
+    virtual ~HTMLTree();
 
     void reset();
 
     HTMLTreeNode *document();
 
-    void inserText();
+    void insertText(QChar c, HTMLTreeNode *parent = nullptr);
 
     void inserRoot(HTMLToken *token);
 
     void insertDoctype(HTMLToken *token);
 
-    void insertComment(const QString &comment, HTMLTreeNode *parent);
+    void insertComment(HTMLToken *token, HTMLTreeNode *parent = nullptr);
 
     HTMLTreeNode *createElement(HTMLToken *token);
 
@@ -84,6 +85,7 @@ private:
 
     QString m_defaultNamespace;
     bool m_useAllowed;
+    bool m_insertFromTable = false;
     QStringList m_allowed;
     QString m_content;
     int m_pos = 0;

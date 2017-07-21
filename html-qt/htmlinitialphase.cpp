@@ -13,16 +13,9 @@ HTMLInitialPhase::HTMLInitialPhase(HTMLParser *parser, HTMLTree *tree) : HTMLAbs
 
 }
 
-bool HTMLInitialPhase::processCharacter(const QChar &c)
+bool HTMLInitialPhase::processSpaceCharacters(HTMLToken *token)
 {
-    qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << c;
-    tree->inserText();
-    return true;
-}
-
-bool HTMLInitialPhase::processSpaceCharacter(const QChar &c)
-{
-    qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << c;
+    qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << token->name;
     return true;
 }
 
@@ -41,7 +34,7 @@ bool HTMLInitialPhase::processEndTag(HTMLToken *token)
 bool HTMLInitialPhase::processCommentTag(HTMLToken *token)
 {
     qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << token;
-    tree->insertComment(token->name, tree->document());
+    tree->insertComment(token, tree->document());
     return true;
 }
 
@@ -63,10 +56,12 @@ bool HTMLInitialPhase::processDoctype(HTMLToken *token)
 
     tree->insertDoctype(token);
 
+    qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << token;
+
     // TODO
 
     parserPriv()->insertionModeEnum = HTMLParser::BeforeHTML;
-    parserPriv()->insertionMode = parserPriv()->imBeforeHTML;
+    parserPriv()->phase = parserPriv()->imBeforeHTML;
     return true;
 }
 

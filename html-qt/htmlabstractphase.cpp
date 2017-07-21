@@ -1,5 +1,8 @@
 #include "htmlabstractphase.h"
 #include "htmlparser.h"
+#include "htmlparser_p.h"
+
+#include "htmltree.h"
 
 #include <QLoggingCategory>
 
@@ -21,15 +24,41 @@ HTMLParserPrivate *HTMLAbstractPhase::parserPriv()
     return parser->d_ptr;
 }
 
-bool HTMLAbstractPhase::processCharacter(const QChar &c)
+void HTMLAbstractPhase::insertHtmlElement()
 {
-    Q_UNUSED(c)
+
+}
+
+void HTMLAbstractPhase::startTagHtml(HTMLToken *token)
+{
+    if (!parserPriv()->firstStartTag && token->name == QLatin1String("html")) {
+        parser->parserErrorToken(QStringLiteral("non-html-root"), 0);
+        return;
+    }
+
+    HTMLTreeNode *last = tree->openElements().last();
+
+    auto it = token->data.constBegin();
+    while (it != token->data.constEnd()) {
+        const QString attr = it->first;
+        const QString value = it->second;
+        if (!last->attributes.contains(attr)) {
+            last->attributes.insert(attr, value);
+        }
+        ++it;
+    }
+    parserPriv()->firstStartTag = false;
+}
+
+bool HTMLAbstractPhase::processCharacter(QChar c)
+{
+    tree->insertText(c);
     return true;
 }
 
-bool HTMLAbstractPhase::processSpaceCharacter(const QChar &c)
+bool HTMLAbstractPhase::processSpaceCharacters(HTMLToken *token)
 {
-    Q_UNUSED(c)
+    Q_UNUSED(token)
     return true;
 }
 
@@ -47,13 +76,18 @@ bool HTMLAbstractPhase::processEndTag(HTMLToken *token)
 
 bool HTMLAbstractPhase::processCommentTag(HTMLToken *token)
 {
-    Q_UNUSED(token)
+    tree->insertComment(token, tree->openElements().last());
     return true;
 }
 
 bool HTMLAbstractPhase::processDoctype(HTMLToken *token)
 {
     Q_UNUSED(token)
+    return true;
+}
+
+bool HTMLAbstractPhase::processEOF()
+{
     return true;
 }
 

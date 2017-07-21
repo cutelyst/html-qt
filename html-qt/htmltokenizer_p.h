@@ -11,14 +11,29 @@ typedef  bool (HTMLTokenizerPrivate::*HTMLTokenizerPrivateMemFn)();
 
 class HTMLToken
 {
+    Q_GADGET
 public:
     enum Type {
+        CharactersToken,
+        SpaceCharactersToken,
         StartTagToken,
         EndTagToken,
         CommentToken,
         DocTypeToken,
+        ParserErrorToken
     };
+    Q_ENUMS(Type)
+
     HTMLToken(Type tokenType) : type(tokenType) {}
+
+    HTMLToken(const QString &_name, Type tokenType = EndTagToken,
+              const QVector<std::pair<QString,QString> > &attributes = QVector<std::pair<QString,QString> >(),
+              bool _selfClosing = false)
+        : name(_name)
+        , type(tokenType)
+        , data(attributes)
+        , selfClosing(_selfClosing)
+    {}
 
     void appendDataCurrentAttributeName(const QChar &c)
     {
@@ -47,8 +62,11 @@ public:
         }
     }
 
+    QMap<QString, QString> dataItems();
+
     QString name; // or data for comment or character types
     Type type;
+    QString dataStr;
     QVector<std::pair<QString,QString> > data;
     bool selfClosing = false;
     bool selfClosingAcknowledged = false;
@@ -138,10 +156,11 @@ public:
 
     QString consumeEntity(QChar *allowedChar = 0);
     QChar consumeNumberEntity(bool isHex);
-    void emitCurrentTagToken();
+    void emitCurrentToken();
 
     // current token
     HTMLToken *currentToken;
+    QVector<HTMLToken *> tokenQueue;
 
     HTMLTokenizer *q_ptr;
     HTMLParser *parser;

@@ -17,9 +17,13 @@ public:
     HTMLParser *parser;
     HTMLParserPrivate *parserPriv();
 
-    virtual bool processCharacter(const QChar &c);
+    virtual void insertHtmlElement();
 
-    virtual bool processSpaceCharacter(const QChar &c);
+    virtual void startTagHtml(HTMLToken *token);
+
+    virtual bool processCharacter(QChar c);
+
+    virtual bool processSpaceCharacters(HTMLToken *token);
 
     virtual bool processStartTag(HTMLToken *token);
 
@@ -28,6 +32,9 @@ public:
     virtual bool processCommentTag(HTMLToken *token);
 
     virtual bool processDoctype(HTMLToken *token);
+
+    virtual bool processEOF();
+
 };
 
 #endif // HTMLABSTRACTPHASE_H

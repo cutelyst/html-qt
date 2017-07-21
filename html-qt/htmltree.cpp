@@ -35,9 +35,15 @@ HTMLTreeNode *HTMLTree::document()
     return m_document;
 }
 
-void HTMLTree::inserText()
+void HTMLTree::insertText(QChar c, HTMLTreeNode *parent)
 {
-    qCDebug(HTML_TREE) << Q_FUNC_INFO;
+    qCDebug(HTML_TREE) << Q_FUNC_INFO << c << m_openElements.size();
+    if (!parent) {
+        parent = m_openElements.last();
+    }
+
+//    if (! m_insertFromTable)
+    parent->insertText(c);
 }
 
 void HTMLTree::inserRoot(HTMLToken *token)
@@ -53,7 +59,7 @@ void HTMLTree::insertDoctype(HTMLToken *token)
     m_document->token = token;
 }
 
-void HTMLTree::insertComment(const QString &comment, HTMLTreeNode *parent)
+void HTMLTree::insertComment(HTMLToken *token, HTMLTreeNode *parent)
 {
     qCDebug(HTML_TREE) << Q_FUNC_INFO;
 }
@@ -61,7 +67,9 @@ void HTMLTree::insertComment(const QString &comment, HTMLTreeNode *parent)
 HTMLTreeNode *HTMLTree::createElement(HTMLToken *token)
 {
     auto ret = new HTMLTreeNode(token->name);
-    ret->attributes = token->data;
+    for (const std::pair<QString,QString> &pair : token->data) {
+        ret->attributes.insertMulti(pair.first, pair.second);
+    }
     return ret;
 }
 
@@ -84,7 +92,7 @@ HTMLTreeNode *HTMLTree::createNode(int &pos, int lastPos, bool plainText, HTMLTr
 void HTMLTree::dumpTree(HTMLTreeNode *root, int level)
 {
     qDebug() << QByteArray("-").repeated(level).data() << ">" << root->token->name;
-    Q_FOREACH (HTMLTreeNode *node, root->children) {
+    for (HTMLTreeNode *node : root->children) {
         dumpTree(node, level + 1);
     }
 }
@@ -94,6 +102,11 @@ HTMLTreeNode::HTMLTreeNode(const QString &name)
     this->name = name;
 }
 
+HTMLTreeNode::~HTMLTreeNode()
+{
+
+}
+
 void HTMLTreeNode::appendChild(HTMLTreeNode *node)
 {
     children.push_back(node);
@@ -101,6 +114,7 @@ void HTMLTreeNode::appendChild(HTMLTreeNode *node)
 
 void HTMLTreeNode::insertText(const QString &data)
 {
+    qDebug() << data;
     text.append(data);
 }
 
@@ -125,11 +139,12 @@ bool HTMLTreeNode::hasContent() const
 QString HTMLTreeNode::asText() const
 {
     QString attributesStr;
-    for (const std::pair<QString,QString> &pair : attributes) {
-        if (pair.second.isEmpty()) {
-            attributesStr += QLatin1Char(' ') + pair.first;
+    auto it = attributes.constBegin();
+    while (it != attributes.constEnd()) {
+        if (it.value().isEmpty()) {
+            attributesStr += QLatin1Char(' ') + it.value();
         } else {
-            attributesStr += QLatin1Char(' ') + pair.first + QLatin1String("=\"") + pair.second + QLatin1Char('"');
+            attributesStr += QLatin1Char(' ') + it.key() + QLatin1String("=\"") + it.value() + QLatin1Char('"');
         }
     }
 

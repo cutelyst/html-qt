@@ -8,9 +8,7 @@ class HTMLInitialPhase : public HTMLAbstractPhase
 public:
     HTMLInitialPhase(HTMLParser *parser, HTMLTree *tree);
 
-    virtual bool processCharacter(const QChar &c) override;
-
-    virtual bool processSpaceCharacter(const QChar &c) override;
+    virtual bool processSpaceCharacters(HTMLToken *token) override;
 
     virtual bool processStartTag(HTMLToken *token) override;
 

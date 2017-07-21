@@ -42,6 +42,8 @@ public:
 
     void parse(const QString &html);
 
+    void reset();
+
 protected:
     void characterToken(const QChar &c);
     void parserErrorToken(const QString &string, int pos);

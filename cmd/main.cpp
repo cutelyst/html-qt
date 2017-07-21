@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     QElapsedTimer t;
     t.start();
     htmlParser.parse(in->readAll());
-    qDebug("Time elapsed: %d ms", t.elapsed());
+    qDebug() << "Time elapsed:" << t.elapsed() << "ms";
 
     return 0;
 }

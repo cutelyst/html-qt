@@ -82,15 +82,21 @@ void HTMLTokenizer::start()
     qCDebug(HTML_TOKENIZER) << "finished";
 }
 
-void HTMLTokenizer::character(const QChar &c)
+void HTMLTokenizer::character(QChar c)
 {
     Q_D(HTMLTokenizer);
+//    auto token = new HTMLToken(HTMLToken::CharactersToken);
+//    token->dataStr = c;
+//    d->tokenQueue.append(token);
     d->parser->characterToken(c);
 }
 
 void HTMLTokenizer::parserError(const QString &error)
 {
     Q_D(HTMLTokenizer);
+    auto token = new HTMLToken(HTMLToken::ParserErrorToken);
+    token->dataStr = error;
+    d->tokenQueue.append(token);
     d->parser->parserErrorToken(error, d->streamPos());
 }
 
@@ -250,7 +256,7 @@ bool HTMLTokenizerPrivate::tagNameState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         // Appending the lower case version
         currentToken->name.append(data.toLower());
@@ -285,7 +291,7 @@ bool HTMLTokenizerPrivate::beforeAttributeNameState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         // Appending the lower case version
         currentToken->data.append({ data.toLower(), QString()});
@@ -336,7 +342,7 @@ bool HTMLTokenizerPrivate::attributeNameState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         currentToken->appendDataCurrentAttributeName(data.toLower());
     } else if (data.isNull()) {
@@ -376,7 +382,7 @@ bool HTMLTokenizerPrivate::afterAttributeNameState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         currentToken->data.append({ data.toLower(), QString() });
         state = HTMLTokenizer::AttributeNameState;
@@ -426,12 +432,12 @@ bool HTMLTokenizerPrivate::beforeAttributeValueState()
         stateFn = &HTMLTokenizerPrivate::attributeValueSingleQuotedState;
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("expected-attribute-value-but-got-right-bracket"));
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (data == '>') {
         Q_EMIT q->parserError(QStringLiteral("expected-attribute-value-but-got-right-bracket"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (data == '<' || data == '=' || data == '`') {
         Q_EMIT q->parserError(QStringLiteral("equals-in-unquoted-attribute-value"));
         currentToken->appendDataCurrentAttributeValue(data);
@@ -520,7 +526,7 @@ bool HTMLTokenizerPrivate::attributeValueUnquotedState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
         currentToken->appendDataCurrentAttributeValue(QChar::ReplacementCharacter);
@@ -564,7 +570,7 @@ bool HTMLTokenizerPrivate::afterAttributeValueQuotedState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         Q_EMIT q->parserError(QStringLiteral("unexpected-character-after-attribute-value"));
         state = HTMLTokenizer::BeforeAttributeNameState;
@@ -590,7 +596,7 @@ bool HTMLTokenizerPrivate::selfClosingStartTagState()
         currentToken->selfClosing = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         Q_EMIT q->parserError(QStringLiteral("unexpected-character-after-solidus-in-tag"));
         state = HTMLTokenizer::BeforeAttributeNameState;
@@ -666,7 +672,7 @@ bool HTMLTokenizerPrivate::commentStartState()
         Q_EMIT q->parserError(QStringLiteral("eof-in-comment"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '-') {
         state = HTMLTokenizer::CommentStartDashState;
@@ -680,7 +686,7 @@ bool HTMLTokenizerPrivate::commentStartState()
         Q_EMIT q->parserError(QStringLiteral("incorrect-comment"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         currentToken->name.append(data);
         state = HTMLTokenizer::CommentState;
@@ -700,7 +706,7 @@ bool HTMLTokenizerPrivate::commentStartDashState()
         Q_EMIT q->parserError(QStringLiteral("eof-in-comment"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '-') {
         state = HTMLTokenizer::CommentEndState;
@@ -716,7 +722,7 @@ bool HTMLTokenizerPrivate::commentStartDashState()
         Q_EMIT q->parserError(QStringLiteral("incorrect-comment"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         // TODO see if we can reduce to a singe call
         currentToken->name.append('-');
@@ -738,7 +744,7 @@ bool HTMLTokenizerPrivate::commentState()
         Q_EMIT q->parserError(QStringLiteral("eof-in-comment"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '-') {
         state = HTMLTokenizer::CommentEndDashState;
@@ -763,7 +769,7 @@ bool HTMLTokenizerPrivate::commentEndDashState()
         Q_EMIT q->parserError(QStringLiteral("eof-in-comment-end-dash"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '-') {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
@@ -797,12 +803,12 @@ bool HTMLTokenizerPrivate::commentEndState()
         Q_EMIT q->parserError(QStringLiteral("eof-in-comment-double-dash"));
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
         // TODO see if we can reduce to a singe call
@@ -846,7 +852,7 @@ bool HTMLTokenizerPrivate::doctypeState()
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken = new HTMLToken(HTMLToken::DocTypeToken);
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeDocTypeNameState;
@@ -873,7 +879,7 @@ bool HTMLTokenizerPrivate::beforeDocTypeNameState()
             stateFn = &HTMLTokenizerPrivate::dataState;
             currentToken = new HTMLToken(HTMLToken::DocTypeToken);
             currentToken->forceQuirks = true;
-            emitCurrentTagToken();
+            emitCurrentToken();
             streamUnconsume();
             return true;
         }
@@ -894,7 +900,7 @@ bool HTMLTokenizerPrivate::beforeDocTypeNameState()
         Q_EMIT q->parserError(QStringLiteral("expected-doctype-name-but-got-right-bracket"  ));
         currentToken = new HTMLToken(HTMLToken::DocTypeToken);
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
     } else {
@@ -919,7 +925,7 @@ bool HTMLTokenizerPrivate::docTypeNameState()
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken = new HTMLToken(HTMLToken::DocTypeToken);
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::AfterDocTypeNameState;
@@ -927,7 +933,7 @@ bool HTMLTokenizerPrivate::docTypeNameState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         currentToken->name.append(data.toLower());
     } else if (data.isNull()) {
@@ -952,7 +958,7 @@ bool HTMLTokenizerPrivate::afterDocTypeNameState()
             state = HTMLTokenizer::DataState;
             stateFn = &HTMLTokenizerPrivate::dataState;
             currentToken->forceQuirks = true;
-            emitCurrentTagToken();
+            emitCurrentToken();
             streamUnconsume();
             return true;
         }
@@ -961,7 +967,7 @@ bool HTMLTokenizerPrivate::afterDocTypeNameState()
     if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         int initalPos = streamPos();
         if (data == 'p' || data == 'P' ||
@@ -1006,7 +1012,7 @@ bool HTMLTokenizerPrivate::afterDocTypePublicKeywordState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeDocTypePublicIdentifierState;
@@ -1026,11 +1032,11 @@ bool HTMLTokenizerPrivate::afterDocTypePublicKeywordState()
         currentToken->forceQuirks = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         Q_EMIT q->parserError(QStringLiteral("unexpected-char-in-doctype"));
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         state = HTMLTokenizer::BogusDocTypeState;
         stateFn = &HTMLTokenizerPrivate::bogusDocTypeState;
     }
@@ -1049,7 +1055,7 @@ bool HTMLTokenizerPrivate::beforeDocTypePublicIdentifierState()
             state = HTMLTokenizer::DataState;
             stateFn = &HTMLTokenizerPrivate::dataState;
             currentToken->forceQuirks = true;
-            emitCurrentTagToken();
+            emitCurrentToken();
             streamUnconsume();
             return true;
         }
@@ -1068,11 +1074,11 @@ bool HTMLTokenizerPrivate::beforeDocTypePublicIdentifierState()
         currentToken->forceQuirks = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         Q_EMIT q->parserError(QStringLiteral("unexpected-char-in-doctype"));
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         state = HTMLTokenizer::BogusDocTypeState;
         stateFn = &HTMLTokenizerPrivate::bogusDocTypeState;
     }
@@ -1091,7 +1097,7 @@ bool HTMLTokenizerPrivate::docTypePublicIdentifierDoubleQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '"') {
         state = HTMLTokenizer::AfterDocTypePublicIdentifierState;
@@ -1104,7 +1110,7 @@ bool HTMLTokenizerPrivate::docTypePublicIdentifierDoubleQuotedState()
         currentToken->forceQuirks = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         currentToken->doctypePublicId.append(data);
     }
@@ -1123,7 +1129,7 @@ bool HTMLTokenizerPrivate::docTypePublicIdentifierSingleQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '\'') {
         state = HTMLTokenizer::AfterDocTypePublicIdentifierState;
@@ -1136,7 +1142,7 @@ bool HTMLTokenizerPrivate::docTypePublicIdentifierSingleQuotedState()
         currentToken->forceQuirks = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         currentToken->doctypePublicId.append(data);
     }
@@ -1155,7 +1161,7 @@ bool HTMLTokenizerPrivate::afterDocTypePublicIdentifierState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BetweenDocTypePublicAndSystemIdentifierState;
@@ -1163,7 +1169,7 @@ bool HTMLTokenizerPrivate::afterDocTypePublicIdentifierState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (data == '"') {
         Q_EMIT q->parserError(QStringLiteral("unexpected-char-in-doctype"));
         currentToken->doctypeSystemId = "";
@@ -1195,7 +1201,7 @@ bool HTMLTokenizerPrivate::betweenDocTypePublicAndSystemIdentifierState()
             state = HTMLTokenizer::DataState;
             stateFn = &HTMLTokenizerPrivate::dataState;
             currentToken->forceQuirks = true;
-            emitCurrentTagToken();
+            emitCurrentToken();
             streamUnconsume();
             return true;
         }
@@ -1204,7 +1210,7 @@ bool HTMLTokenizerPrivate::betweenDocTypePublicAndSystemIdentifierState()
     if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (data == '"') {
         currentToken->doctypeSystemId = "";
         state = HTMLTokenizer::DocTypeSystemIdentifierDoubleQuotedState;
@@ -1234,7 +1240,7 @@ bool HTMLTokenizerPrivate::afterDocTypeSystemKeywordState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (IS_SPACE_CHARACTER(data)) {
         state = HTMLTokenizer::BeforeDocTypeSystemIdentifierState;
@@ -1242,7 +1248,7 @@ bool HTMLTokenizerPrivate::afterDocTypeSystemKeywordState()
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else if (data == '"') {
         Q_EMIT q->parserError(QStringLiteral("unexpected-char-in-doctype"));
         currentToken->doctypeSystemId = "";
@@ -1274,7 +1280,7 @@ bool HTMLTokenizerPrivate::beforeDocTypeSystemIdentifierState()
             state = HTMLTokenizer::DataState;
             stateFn = &HTMLTokenizerPrivate::dataState;
             currentToken->forceQuirks = true;
-            emitCurrentTagToken();
+            emitCurrentToken();
             streamUnconsume();
             return true;
         }
@@ -1293,7 +1299,7 @@ bool HTMLTokenizerPrivate::beforeDocTypeSystemIdentifierState()
         currentToken->forceQuirks = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         Q_EMIT q->parserError(QStringLiteral("unexpected-char-in-doctype"));
         currentToken->forceQuirks = true;
@@ -1315,7 +1321,7 @@ bool HTMLTokenizerPrivate::docTypeSystemIdentifierDoubleQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '"') {
         state = HTMLTokenizer::AfterDocTypeSystemIdentifierState;
@@ -1330,7 +1336,7 @@ bool HTMLTokenizerPrivate::docTypeSystemIdentifierDoubleQuotedState()
         currentToken->forceQuirks = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         currentToken->doctypeSystemId.append(data);
     }
@@ -1349,7 +1355,7 @@ bool HTMLTokenizerPrivate::docTypeSystemIdentifierSingleQuotedState()
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
         currentToken->forceQuirks = true;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '\'') {
         state = HTMLTokenizer::AfterDocTypeSystemIdentifierState;
@@ -1364,7 +1370,7 @@ bool HTMLTokenizerPrivate::docTypeSystemIdentifierSingleQuotedState()
         currentToken->forceQuirks = true;
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     }  else {
         currentToken->doctypeSystemId.append(data);
     }
@@ -1383,7 +1389,7 @@ bool HTMLTokenizerPrivate::afterDocTypeSystemIdentifierState()
             state = HTMLTokenizer::DataState;
             stateFn = &HTMLTokenizerPrivate::dataState;
             currentToken->forceQuirks = true;
-            emitCurrentTagToken();
+            emitCurrentToken();
             streamUnconsume();
             return true;
         }
@@ -1392,7 +1398,7 @@ bool HTMLTokenizerPrivate::afterDocTypeSystemIdentifierState()
     if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     } else {
         q->parserError(QStringLiteral("unexpected-char-in-doctype"));
         currentToken->forceQuirks = true;
@@ -1411,12 +1417,12 @@ bool HTMLTokenizerPrivate::bogusDocTypeState()
     if (!consumeStream(data)) {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
         streamUnconsume();
     } else if (data == '>') {
         state = HTMLTokenizer::DataState;
         stateFn = &HTMLTokenizerPrivate::dataState;
-        emitCurrentTagToken();
+        emitCurrentToken();
     }
 
     return true;
@@ -1547,22 +1553,31 @@ QChar HTMLTokenizerPrivate::consumeNumberEntity(bool isHex)
     return ret;
 }
 
-void HTMLTokenizerPrivate::emitCurrentTagToken()
+void HTMLTokenizerPrivate::emitCurrentToken()
 {
     Q_Q(HTMLTokenizer);
 
-//    qDebug() << "emitCurrentTagToken" << currentToken;
+//    qDebug() << "emitCurrentToken" << currentToken;
     HTMLToken *token = currentToken;
     if (token->type == HTMLToken::EndTagToken) {
         if (!token->data.isEmpty()) {
-            Q_EMIT q->parserError(QString("attributes-in-end-tag"));
+            Q_EMIT q->parserError(QStringLiteral("attributes-in-end-tag"));
         }
 
         if (token->selfClosing) {
-            Q_EMIT q->parserError(QString("self-closing-flag-on-end-tag"));
+            Q_EMIT q->parserError(QStringLiteral("self-closing-flag-on-end-tag"));
         }
     }
     Q_EMIT q->token(token);
 
     currentToken = 0;
+}
+
+QMap<QString, QString> HTMLToken::dataItems()
+{
+    QMap<QString, QString> ret;
+    for (const std::pair<QString,QString> &pair : data) {
+        ret.insertMulti(pair.first, pair.second);
+    }
+    return ret;
 }
