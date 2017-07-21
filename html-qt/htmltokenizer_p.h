@@ -23,7 +23,7 @@ public:
     void appendDataCurrentAttributeName(const QChar &c)
     {
         if (data.isEmpty()) {
-            data.append(qMakePair<QString,QString>(c, ""));
+            data.append({ c, QString()});
         } else {
             data.last().first.append(c);
         }
@@ -32,7 +32,7 @@ public:
     void appendDataCurrentAttributeValue(const QChar &c)
     {
         if (data.isEmpty()) {
-            data.append(qMakePair<QString,QString>("", c));
+            data.append({QString(), c});
         } else {
             data.last().second.append(c);
         }
@@ -41,7 +41,7 @@ public:
     void appendDataCurrentAttributeValue(const QString &s)
     {
         if (data.isEmpty()) {
-            data.append(qMakePair<QString,QString>("", s));
+            data.push_back({QString(), s});
         } else {
             data.last().second.append(s);
         }
@@ -49,7 +49,7 @@ public:
 
     QString name; // or data for comment or character types
     Type type;
-    QList<QPair<QString,QString> > data;
+    QVector<std::pair<QString,QString> > data;
     bool selfClosing = false;
     bool selfClosingAcknowledged = false;
     bool forceQuirks = false;

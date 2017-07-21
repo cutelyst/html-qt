@@ -8,6 +8,7 @@
 
 #include <QTextStream>
 #include <QFile>
+#include <QElapsedTimer>
 
 #include "../html-qt/htmlparser.h"
 
@@ -49,7 +50,7 @@ int main(int argc, char *argv[])
     }
 
     HTMLParser htmlParser;
-    QTime t;
+    QElapsedTimer t;
     t.start();
     htmlParser.parse(in->readAll());
     qDebug("Time elapsed: %d ms", t.elapsed());

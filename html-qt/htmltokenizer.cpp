@@ -288,12 +288,12 @@ bool HTMLTokenizerPrivate::beforeAttributeNameState()
         emitCurrentTagToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
         // Appending the lower case version
-        currentToken->data.append(qMakePair(data.toLower(), QString()));
+        currentToken->data.append({ data.toLower(), QString()});
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
-        currentToken->data.append(qMakePair(QChar::ReplacementCharacter, QString()));
+        currentToken->data.append({ QString(QChar::ReplacementCharacter), QString()});
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     } else if (data == '"' ||
@@ -301,11 +301,11 @@ bool HTMLTokenizerPrivate::beforeAttributeNameState()
                data == '<' ||
                data == '=') {
         Q_EMIT q->parserError(QStringLiteral("invalid-character-in-attribute-name"));
-        currentToken->data.append(qMakePair(data, QString()));
+        currentToken->data.append({ data, QString() });
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     } else {
-        currentToken->data.append(qMakePair(data, QString()));
+        currentToken->data.append({ data, QString() });
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     }
@@ -378,21 +378,21 @@ bool HTMLTokenizerPrivate::afterAttributeNameState()
         stateFn = &HTMLTokenizerPrivate::dataState;
         emitCurrentTagToken();
     } else if (IS_ASCII_UPPERCASE(data)) {
-        currentToken->data.append(qMakePair<QString,QString>(data.toLower(), QString()));
+        currentToken->data.append({ data.toLower(), QString() });
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     } else if (data.isNull()) {
         Q_EMIT q->parserError(QStringLiteral("invalid-codepoint"));
-        currentToken->data.append(qMakePair<QString,QString>(QChar(QChar::ReplacementCharacter), QString()));
+        currentToken->data.append({ QString(QChar::ReplacementCharacter), QString() });
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     } else if (data == '"' || data == '\'' || data == '<') {
         Q_EMIT q->parserError(QStringLiteral("invalid-character-after-attribute-name"));
-        currentToken->data.append(qMakePair<QString,QString>(data, QString()));
+        currentToken->data.append({ data, QString() });
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     } else {
-        currentToken->data.append(qMakePair<QString,QString>(data, QString()));
+        currentToken->data.append({ data, QString() });
         state = HTMLTokenizer::AttributeNameState;
         stateFn = &HTMLTokenizerPrivate::attributeNameState;
     }
