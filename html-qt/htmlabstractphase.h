@@ -1,5 +1,5 @@
-#ifndef HTMLINSERTMODE_H
-#define HTMLINSERTMODE_H
+#ifndef HTMLABSTRACTPHASE_H
+#define HTMLABSTRACTPHASE_H
 
 #include <QObject>
 
@@ -7,11 +7,11 @@ class HTMLParserPrivate;
 class HTMLParser;
 class HTMLTree;
 class HTMLToken;
-class HTMLInsertMode
+class HTMLAbstractPhase
 {
 public:
-    HTMLInsertMode(HTMLParser *parser, HTMLTree *tree);
-    virtual ~HTMLInsertMode();
+    HTMLAbstractPhase(HTMLParser *parser, HTMLTree *tree);
+    virtual ~HTMLAbstractPhase();
 
     HTMLTree *tree;
     HTMLParser *parser;
@@ -30,4 +30,4 @@ public:
     virtual bool processDoctype(HTMLToken *token);
 };
 
-#endif // HTMLINSERTMODE_H
+#endif // HTMLABSTRACTPHASE_H

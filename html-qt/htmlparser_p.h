@@ -5,7 +5,7 @@
 #include "htmltokenizer_p.h"
 #include "htmltree.h"
 
-#include "htmlinsertmode.h"
+#include "htmlabstractphase.h"
 
 class HTMLParserPrivate : public QObject
 {
@@ -14,32 +14,32 @@ public:
     QString html;
     HTMLTokenizer *tokenizer;
     HTMLTree *tree;
-    HTMLInsertMode *insertionMode;
+    HTMLAbstractPhase *insertionMode;
     HTMLParser::InsertionMode insertionModeEnum = HTMLParser::Initial;
 
-    HTMLInsertMode *imInitial;
-    HTMLInsertMode *imBeforeHTML;
-    HTMLInsertMode *imBeforeHead;
-    HTMLInsertMode *imInHead;
-    HTMLInsertMode *imInHeadNoScript;
-    HTMLInsertMode *imAfterHead;
-    HTMLInsertMode *imInBody;
-    HTMLInsertMode *imText;
-    HTMLInsertMode *imInTable;
-    HTMLInsertMode *imInTableText;
-    HTMLInsertMode *imInCaption;
-    HTMLInsertMode *imInColumGroup;
-    HTMLInsertMode *imInTableBody;
-    HTMLInsertMode *imInRow;
-    HTMLInsertMode *imInCell;
-    HTMLInsertMode *imInSelect;
-    HTMLInsertMode *imInSelectInTable;
-    HTMLInsertMode *imInTemplate;
-    HTMLInsertMode *imAfterBody;
-    HTMLInsertMode *imInFrameset;
-    HTMLInsertMode *imAfterFrameset;
-    HTMLInsertMode *imAfterAfterBody;
-    HTMLInsertMode *imAfterAfterFrameset;
+    HTMLAbstractPhase *imInitial;
+    HTMLAbstractPhase *imBeforeHTML;
+    HTMLAbstractPhase *imBeforeHead;
+    HTMLAbstractPhase *imInHead;
+    HTMLAbstractPhase *imInHeadNoScript;
+    HTMLAbstractPhase *imAfterHead;
+    HTMLAbstractPhase *imInBody;
+    HTMLAbstractPhase *imText;
+    HTMLAbstractPhase *imInTable;
+    HTMLAbstractPhase *imInTableText;
+    HTMLAbstractPhase *imInCaption;
+    HTMLAbstractPhase *imInColumGroup;
+    HTMLAbstractPhase *imInTableBody;
+    HTMLAbstractPhase *imInRow;
+    HTMLAbstractPhase *imInCell;
+    HTMLAbstractPhase *imInSelect;
+    HTMLAbstractPhase *imInSelectInTable;
+    HTMLAbstractPhase *imInTemplate;
+    HTMLAbstractPhase *imAfterBody;
+    HTMLAbstractPhase *imInFrameset;
+    HTMLAbstractPhase *imAfterFrameset;
+    HTMLAbstractPhase *imAfterAfterBody;
+    HTMLAbstractPhase *imAfterAfterFrameset;
 };
 
 #endif // HTMLPARSER_P_H

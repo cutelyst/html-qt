@@ -1,6 +1,6 @@
 #include "htmlparser_p.h"
 
-#include "htmliminitial.h"
+#include "htmlinitialphase.h"
 
 #include <QMetaEnum>
 #include <QLoggingCategory>
@@ -15,29 +15,29 @@ HTMLParser::HTMLParser(QObject *parent) : QObject(parent)
     d->tokenizer = new HTMLTokenizer(this);
 
     HTMLTree *tree = new HTMLTree;
-    d->imInitial = new HTMLIMInitial(this, tree);
-    d->imBeforeHTML = new HTMLInsertMode(this, tree);
-    d->imBeforeHead = new HTMLInsertMode(this, tree);
-    d->imInHead = new HTMLInsertMode(this, tree);
-    d->imInHeadNoScript = new HTMLInsertMode(this, tree);
-    d->imAfterHead = new HTMLInsertMode(this, tree);
-    d->imInBody = new HTMLInsertMode(this, tree);
-    d->imText = new HTMLInsertMode(this, tree);
-    d->imInTable = new HTMLInsertMode(this, tree);
-    d->imInTableText = new HTMLInsertMode(this, tree);
-    d->imInCaption = new HTMLInsertMode(this, tree);
-    d->imInColumGroup = new HTMLInsertMode(this, tree);
-    d->imInTableBody = new HTMLInsertMode(this, tree);
-    d->imInRow = new HTMLInsertMode(this, tree);
-    d->imInCell = new HTMLInsertMode(this, tree);
-    d->imInSelect = new HTMLInsertMode(this, tree);
-    d->imInSelectInTable = new HTMLInsertMode(this, tree);
-    d->imInTemplate = new HTMLInsertMode(this, tree);
-    d->imAfterBody = new HTMLInsertMode(this, tree);
-    d->imInFrameset = new HTMLInsertMode(this, tree);
-    d->imAfterFrameset = new HTMLInsertMode(this, tree);
-    d->imAfterAfterBody = new HTMLInsertMode(this, tree);
-    d->imAfterAfterFrameset = new HTMLInsertMode(this, tree);
+    d->imInitial = new HTMLInitialPhase(this, tree);
+    d->imBeforeHTML = new HTMLAbstractPhase(this, tree);
+    d->imBeforeHead = new HTMLAbstractPhase(this, tree);
+    d->imInHead = new HTMLAbstractPhase(this, tree);
+    d->imInHeadNoScript = new HTMLAbstractPhase(this, tree);
+    d->imAfterHead = new HTMLAbstractPhase(this, tree);
+    d->imInBody = new HTMLAbstractPhase(this, tree);
+    d->imText = new HTMLAbstractPhase(this, tree);
+    d->imInTable = new HTMLAbstractPhase(this, tree);
+    d->imInTableText = new HTMLAbstractPhase(this, tree);
+    d->imInCaption = new HTMLAbstractPhase(this, tree);
+    d->imInColumGroup = new HTMLAbstractPhase(this, tree);
+    d->imInTableBody = new HTMLAbstractPhase(this, tree);
+    d->imInRow = new HTMLAbstractPhase(this, tree);
+    d->imInCell = new HTMLAbstractPhase(this, tree);
+    d->imInSelect = new HTMLAbstractPhase(this, tree);
+    d->imInSelectInTable = new HTMLAbstractPhase(this, tree);
+    d->imInTemplate = new HTMLAbstractPhase(this, tree);
+    d->imAfterBody = new HTMLAbstractPhase(this, tree);
+    d->imInFrameset = new HTMLAbstractPhase(this, tree);
+    d->imAfterFrameset = new HTMLAbstractPhase(this, tree);
+    d->imAfterAfterBody = new HTMLAbstractPhase(this, tree);
+    d->imAfterAfterFrameset = new HTMLAbstractPhase(this, tree);
     d->insertionMode = d->imInitial;
     d->tree = tree;
 }

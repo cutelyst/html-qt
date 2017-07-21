@@ -1,4 +1,4 @@
-#include "htmliminitial.h"
+#include "htmlinitialphase.h"
 
 #include "htmltree.h"
 #include "htmltokenizer_p.h"
@@ -8,44 +8,44 @@
 
 Q_LOGGING_CATEGORY(HTML_IM_INITIAL, "htmlqt.im.initial")
 
-HTMLIMInitial::HTMLIMInitial(HTMLParser *parser, HTMLTree *tree) : HTMLInsertMode(parser, tree)
+HTMLInitialPhase::HTMLInitialPhase(HTMLParser *parser, HTMLTree *tree) : HTMLAbstractPhase(parser, tree)
 {
 
 }
 
-bool HTMLIMInitial::processCharacter(const QChar &c)
+bool HTMLInitialPhase::processCharacter(const QChar &c)
 {
     qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << c;
     tree->inserText();
     return true;
 }
 
-bool HTMLIMInitial::processSpaceCharacter(const QChar &c)
+bool HTMLInitialPhase::processSpaceCharacter(const QChar &c)
 {
     qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << c;
     return true;
 }
 
-bool HTMLIMInitial::processStartTag(HTMLToken *token)
+bool HTMLInitialPhase::processStartTag(HTMLToken *token)
 {
     qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << token;
     return true;
 }
 
-bool HTMLIMInitial::processEndTag(HTMLToken *token)
+bool HTMLInitialPhase::processEndTag(HTMLToken *token)
 {
     qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << token;
     return true;
 }
 
-bool HTMLIMInitial::processCommentTag(HTMLToken *token)
+bool HTMLInitialPhase::processCommentTag(HTMLToken *token)
 {
     qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << token;
     tree->insertComment(token->name, tree->document());
     return true;
 }
 
-bool HTMLIMInitial::processDoctype(HTMLToken *token)
+bool HTMLInitialPhase::processDoctype(HTMLToken *token)
 {
     qCCritical(HTML_IM_INITIAL) << Q_FUNC_INFO << token;
     const QString &name = token->name;

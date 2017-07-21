@@ -5,8 +5,8 @@ include_directories(
 )
 
 set(htmlqt_SRC
-    htmlinsertmode.cpp
-    htmliminitial.cpp
+    htmlabstractphase.cpp
+    htmlinitialphase.cpp
     htmltokenizer.cpp
     htmltokenizer_p.h
     htmlparser.cpp

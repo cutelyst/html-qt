@@ -1,12 +1,12 @@
-#ifndef HTMLIMINITIAL_H
-#define HTMLIMINITIAL_H
+#ifndef HTMLINITIALPHASE_H
+#define HTMLINITIALPHASE_H
 
-#include "htmlinsertmode.h"
+#include "htmlabstractphase.h"
 
-class HTMLIMInitial : public HTMLInsertMode
+class HTMLInitialPhase : public HTMLAbstractPhase
 {
 public:
-    HTMLIMInitial(HTMLParser *parser, HTMLTree *tree);
+    HTMLInitialPhase(HTMLParser *parser, HTMLTree *tree);
 
     virtual bool processCharacter(const QChar &c) override;
 
@@ -22,4 +22,4 @@ public:
 
 };
 
-#endif // HTMLIMINITIAL_H
+#endif // HTMLINITIALPHASE_H
